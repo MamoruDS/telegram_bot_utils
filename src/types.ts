@@ -125,7 +125,7 @@ interface message {
     readonly forward_sender_name?: string
     readonly forward_from?: messageFrom
     readonly forward_data?: timestamp
-    readonly reply_to_message?: {}
+    readonly reply_to_message?: messageCommon
     readonly new_chat_participant?: {}
     readonly new_chat_member?: {}
     readonly new_chat_members?: {}
@@ -163,7 +163,6 @@ interface messageBasic extends message {
     readonly poll?: messagePoll
     readonly location?: messageLocation
     readonly contact?: messageContact
-    readonly reply_to_message?: {}
 }
 
 interface messageCommon extends message, messageBasic {}
