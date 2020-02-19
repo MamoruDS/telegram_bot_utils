@@ -1,0 +1,22 @@
+{
+    "name": "telegram_bot_utils",
+    "version": "0.1.0",
+    "description": "",
+    "main": "dist/main.js",
+    "directories": {
+        "test": "test"
+    },
+    "scripts": {
+        "compile": "tsc",
+        "compile-watch": "tsc --watch"
+    },
+    "author": "MamoruDS",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/lowdb": "^1.0.9",
+        "@types/node": "^13.7.2"
+    },
+    "dependencies": {
+        "lowdb": "^1.0.0"
+    }
+}
