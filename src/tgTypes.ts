@@ -2,7 +2,7 @@ type Integer = number
 type Float = number
 
 // https://core.telegram.org/bots/api#user
-interface User {
+export interface User {
     readonly id: Integer
     readonly is_bot: boolean
     readonly first_name: string
@@ -15,7 +15,7 @@ interface User {
 }
 
 // https://core.telegram.org/bots/api#chat
-interface Chat {
+export interface Chat {
     readonly id: Integer
     readonly type: string
     readonly title?: string
@@ -33,7 +33,7 @@ interface Chat {
 }
 
 // https://core.telegram.org/bots/api#message
-interface Message {
+export interface Message {
     readonly message_id: Integer
     readonly from?: User
     readonly date: Integer
@@ -84,7 +84,7 @@ interface Message {
 }
 
 // https://core.telegram.org/bots/api#messageentity
-interface MessageEntity {
+export interface MessageEntity {
     readonly type:
         | 'mention'
         | 'hastag'
@@ -109,7 +109,7 @@ interface MessageEntity {
 }
 
 // https://core.telegram.org/bots/api#photosize
-interface PhotoSize {
+export interface PhotoSize {
     readonly file_id: String
     readonly file_unique_id: string
     readonly width: Integer
@@ -118,7 +118,7 @@ interface PhotoSize {
 }
 
 // https://core.telegram.org/bots/api#audio
-interface Audio {
+export interface Audio {
     readonly file_id: String
     readonly file_unique_id: string
     readonly duration: Integer
@@ -130,7 +130,7 @@ interface Audio {
 }
 
 // https://core.telegram.org/bots/api#document
-interface Document {
+export interface Document {
     readonly file_id: String
     readonly file_unique_id: string
     readonly thumb?: PhotoSize
@@ -140,7 +140,7 @@ interface Document {
 }
 
 // https://core.telegram.org/bots/api#video
-interface Video {
+export interface Video {
     readonly file_id: string
     readonly file_unique_id: string
     readonly width: Integer
@@ -152,7 +152,7 @@ interface Video {
 }
 
 // https://core.telegram.org/bots/api#animation
-interface Animation {
+export interface Animation {
     readonly file_id: string
     readonly file_unique_id: string
     readonly width: Integer
@@ -165,7 +165,7 @@ interface Animation {
 }
 
 // https://core.telegram.org/bots/api#voice
-interface Voice {
+export interface Voice {
     readonly file_id: string
     readonly file_unique_id: string
     readonly duration: Integer
@@ -174,7 +174,7 @@ interface Voice {
 }
 
 // https://core.telegram.org/bots/api#videonote
-interface VideoNote {
+export interface VideoNote {
     readonly file_id: string
     readonly file_unique_id: string
     readonly length: Integer
@@ -184,7 +184,7 @@ interface VideoNote {
 }
 
 // https://core.telegram.org/bots/api#contact
-interface Contact {
+export interface Contact {
     readonly phone_number: string
     readonly first_name: string
     readonly last_name?: string
@@ -193,13 +193,13 @@ interface Contact {
 }
 
 // https://core.telegram.org/bots/api#location
-interface Location {
+export interface Location {
     readonly longitude: Float
     readonly latitude: Float
 }
 
 // https://core.telegram.org/bots/api#venue
-interface Venue {
+export interface Venue {
     readonly location: Location
     readonly title: string
     readonly address: string
@@ -208,20 +208,20 @@ interface Venue {
 }
 
 // https://core.telegram.org/bots/api#polloption
-interface PollOption {
+export interface PollOption {
     readonly text: string
     readonly voter_count: Integer
 }
 
 // https://core.telegram.org/bots/api#pollanswer
-interface PollAnswer {
+export interface PollAnswer {
     readonly poll_id: string
     readonly user: User
     readonly option_ids: Integer[] | []
 }
 
 // https://core.telegram.org/bots/api#poll
-interface Poll {
+export interface Poll {
     readonly id: string
     readonly question: string
     readonly options: PollOption[]
@@ -234,13 +234,13 @@ interface Poll {
 }
 
 // https://core.telegram.org/bots/api#userprofilephotos
-interface UserProfilePhotos {
+export interface UserProfilePhotos {
     readonly total_count: Integer
     readonly photos: PhotoSize[][]
 }
 
 // https://core.telegram.org/bots/api#file
-interface File {
+export interface File {
     readonly file_id: string
     readonly file_unique_id: string
     readonly file_size?: Integer
@@ -248,7 +248,7 @@ interface File {
 }
 
 // https://core.telegram.org/bots/api#replykeyboardmarkup
-interface ReplyKeyboardMarkup {
+export interface ReplyKeyboardMarkup {
     readonly keyboard: KeyboardButton[][]
     readonly resize_keyboard?: boolean
     readonly one_time_keyboard?: boolean
@@ -256,7 +256,7 @@ interface ReplyKeyboardMarkup {
 }
 
 // https://core.telegram.org/bots/api#keyboardbutton
-interface KeyboardButton {
+export interface KeyboardButton {
     readonly text: string
     readonly request_contact?: boolean
     readonly request_location?: boolean
@@ -264,23 +264,23 @@ interface KeyboardButton {
 }
 
 // https://core.telegram.org/bots/api#keyboardbuttonpolltype
-interface KeyboardButtonPollType {
+export interface KeyboardButtonPollType {
     readonly type?: string | 'quiz' | 'regular'
 }
 
 // https://core.telegram.org/bots/api#replykeyboardremove
-interface ReplyKeyboardRemove {
+export interface ReplyKeyboardRemove {
     readonly remove_keyboard: true
     readonly selective?: boolean
 }
 
 // https://core.telegram.org/bots/api#inlinekeyboardmarkup
-interface InlineKeyboardMarkup {
+export interface InlineKeyboardMarkup {
     readonly inline_keyboard: InlineKeyboardButton[][]
 }
 
 // https://core.telegram.org/bots/api#inlinekeyboardbutton
-interface InlineKeyboardButton {
+export interface InlineKeyboardButton {
     readonly text: string
     readonly url?: string
     readonly login_url?: LoginUrl
@@ -292,7 +292,7 @@ interface InlineKeyboardButton {
 }
 
 // https://core.telegram.org/bots/api#loginurl
-interface LoginUrl {
+export interface LoginUrl {
     readonly url: string
     readonly forward_text?: string
     readonly bot_username?: string
@@ -300,7 +300,7 @@ interface LoginUrl {
 }
 
 // https://core.telegram.org/bots/api#callbackquery
-interface CallbackQuery {
+export interface CallbackQuery {
     readonly id: string
     readonly from: User
     readonly message?: Message
@@ -311,13 +311,13 @@ interface CallbackQuery {
 }
 
 // https://core.telegram.org/bots/api#forcereply
-interface ForceReply {
+export interface ForceReply {
     readonly force_reply: true
     readonly selective?: boolean
 }
 
 // https://core.telegram.org/bots/api#chatphoto
-interface ChatPhoto {
+export interface ChatPhoto {
     readonly small_file_id: string
     readonly small_file_unique_id: string
     readonly big_file_id: string
@@ -325,7 +325,7 @@ interface ChatPhoto {
 }
 
 // https://core.telegram.org/bots/api#chatmember
-interface ChatMember {
+export interface ChatMember {
     readonly user: User
     readonly status:
         | 'creator'
@@ -354,7 +354,7 @@ interface ChatMember {
 }
 
 // https://core.telegram.org/bots/api#chatpermissions
-interface ChatPermissions {
+export interface ChatPermissions {
     readonly can_send_messages?: boolean
     readonly can_send_media_messages?: boolean
     readonly can_send_polls?: boolean
@@ -366,7 +366,7 @@ interface ChatPermissions {
 }
 
 // https://core.telegram.org/bots/api#responseparameters
-interface ResponseParameters {
+export interface ResponseParameters {
     readonly migrate_to_chat_id?: Integer
     readonly retry_after?: Integer
 }
@@ -383,7 +383,7 @@ const InputMedia = [
 type ParseMode = 'Markdown' | 'MarkdownV2' | 'HTML'
 
 // https://core.telegram.org/bots/api#inputmediaphoto
-interface InputMediaPhoto {
+export interface InputMediaPhoto {
     readonly type: string
     readonly media: string
     readonly caption?: string
@@ -391,7 +391,7 @@ interface InputMediaPhoto {
 }
 
 // https://core.telegram.org/bots/api#inputmediavideo
-interface InputMediaVideo {
+export interface InputMediaVideo {
     readonly type: string
     readonly media: string
     readonly thumb?: InputFile | string
@@ -404,7 +404,7 @@ interface InputMediaVideo {
 }
 
 // https://core.telegram.org/bots/api#inputmediaanimation
-interface InputMediaAnimation {
+export interface InputMediaAnimation {
     readonly type: string
     readonly media: string
     readonly thumb?: InputFile | string
@@ -416,7 +416,7 @@ interface InputMediaAnimation {
 }
 
 // https://core.telegram.org/bots/api#inputmediaaudio
-interface InputMediaAudio {
+export interface InputMediaAudio {
     readonly type: string
     readonly media: string
     readonly thumb?: InputFile | string
@@ -428,7 +428,7 @@ interface InputMediaAudio {
 }
 
 // https://core.telegram.org/bots/api#inputmediadocument
-interface InputMediaDocument {
+export interface InputMediaDocument {
     readonly type: string
     readonly media: string
     readonly thumb?: InputFile | string
@@ -440,7 +440,7 @@ interface InputMediaDocument {
 type InputFile = object
 
 // https://core.telegram.org/bots/api#game
-interface Game {
+export interface Game {
     readonly title: string
     readonly description: string
     readonly photo: PhotoSize[]
@@ -450,7 +450,7 @@ interface Game {
 }
 
 // https://core.telegram.org/bots/api#sticker
-interface Sticker {
+export interface Sticker {
     readonly file_id: string
     readonly file_unique_id: string
     readonly width: Integer
@@ -464,7 +464,7 @@ interface Sticker {
 }
 
 // https://core.telegram.org/bots/api#maskposition
-interface MaskPosition {
+export interface MaskPosition {
     readonly point: 'forehead' | 'eyes' | 'mouth' | 'chin'
     readonly x_shift: Float
     readonly y_shift: Float
@@ -472,7 +472,7 @@ interface MaskPosition {
 }
 
 // https://core.telegram.org/bots/api#invoice
-interface Invoice {
+export interface Invoice {
     readonly title: string
     readonly description: string
     readonly start_parameter: string
@@ -481,7 +481,7 @@ interface Invoice {
 }
 
 // https://core.telegram.org/bots/api#successfulpayment
-interface SuccessfulPayment {
+export interface SuccessfulPayment {
     readonly currency: string
     readonly total_amount: Integer
     readonly invoice_payload: string
@@ -492,7 +492,7 @@ interface SuccessfulPayment {
 }
 
 // https://core.telegram.org/bots/api#shippingaddress
-interface ShippingAddress {
+export interface ShippingAddress {
     readonly country_code: string
     readonly state: string
     readonly city: string
@@ -502,7 +502,7 @@ interface ShippingAddress {
 }
 
 // https://core.telegram.org/bots/api#orderinfo
-interface OrderInfo {
+export interface OrderInfo {
     readonly name?: string
     readonly phone_number?: string
     readonly email?: string
@@ -510,13 +510,13 @@ interface OrderInfo {
 }
 
 // https://core.telegram.org/bots/api#passportdata
-interface PassportData {
+export interface PassportData {
     readonly data: EncryptedPassportElement[]
     readonly credentials: EncryptedCredentials
 }
 
 // https://core.telegram.org/bots/api#passportfile
-interface PassportFile {
+export interface PassportFile {
     readonly file_id: string
     readonly file_unique_id: string
     readonly file_size: Integer
@@ -526,7 +526,7 @@ interface PassportFile {
 type BASE64 = string
 
 // https://core.telegram.org/bots/api#encryptedpassportelement
-interface EncryptedPassportElement {
+export interface EncryptedPassportElement {
     type: string
     data?: string
     phone_number?: string
@@ -540,11 +540,11 @@ interface EncryptedPassportElement {
 }
 
 // https://core.telegram.org/bots/api#encryptedcredentials
-interface EncryptedCredentials {
+export interface EncryptedCredentials {
     data: BASE64
     hash: BASE64
     secret: BASE64
 }
 
 // https://core.telegram.org/bots/api#callbackgame
-interface CallbackGame {}
+export interface CallbackGame {}
