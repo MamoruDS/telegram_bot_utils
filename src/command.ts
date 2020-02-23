@@ -1,5 +1,8 @@
 export const cmdMatch = (input: string): string[] | null => {
-    const regex = new RegExp(`(^\\/([\\w|_|\\-|\\.]{1,})\\s)|([^\\s]{1,})`, 'g')
+    const regex = new RegExp(
+        `(^\\/([\\w|_|\\-|\\.]{1,})(?=$|\\s))|([^\\s]{1,})`,
+        'g'
+    )
     let result = regex.exec(input)
     /**
      * result [0] -> input
