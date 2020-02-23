@@ -22,7 +22,7 @@ if (!fs.statSync(DATA_DIR).isDirectory()) {
 const adapter = new FileSync(DATA_PATH)
 const db = low(adapter)
 
-db.defaults({ callback_data: {} }).write()
+db.defaults({ bots: {}, cache: { callback_data: {} } }).write()
 
 export const setCallbackData = (data: string): string => {
     const id = utils.genId('C')
@@ -69,12 +69,14 @@ export const setApplicationData = (
     } else {
         if (data === null) return 'removed'
         const _id = utils.genId('D')
-        db.set(_appPath, {
-            id: _id,
-            chat_id: chatId,
-            user_id: userId,
-            data: data,
-        }).write()
+        db.get(_appPath)
+            .push({
+                id: _id,
+                chat_id: chatId,
+                user_id: userId,
+                data: data,
+            })
+            .write()
         return _id
     }
 }
