@@ -41,31 +41,53 @@ export const delCallbackData = (id: string): void => {
 export const setApplicationData = (
     botId: string,
     application: string,
-    chatId: string,
-    userId: string,
-    data: object
-): string => {
-    const id = utils.genId('D')
-    if (db.get(['bots', botId, application]).value() === undefined) {
-        db.set(['bots', botId, application], []).write()
+    chatId: number,
+    userId: number,
+    data: object | null
+): string | 'removed' => {
+    const _appPath = ['bots', botId, application]
+    if (db.get(_appPath).value() === undefined && data !== null) {
+        db.set(_appPath, []).write()
     }
-    db.set(['bots', botId, application], {
-        id: id,
-        chat_id: chatId,
-        user_id: userId,
-        data: data,
-    }).write()
-    return id
+    let _data = db
+        .get(_appPath)
+        .find({ chat_id: chatId, user_id: userId })
+        .value()
+    if (_data !== undefined) {
+        if (data === null) {
+            db.get(_appPath)
+                .remove({ id: _data.id })
+                .write()
+            return 'removed'
+        } else {
+            db.get(_appPath)
+                .find({ id: _data.id })
+                .assign({ data: data })
+                .write()
+            return _data.id
+        }
+    } else {
+        if (data === null) return 'removed'
+        const _id = utils.genId('D')
+        db.set(_appPath, {
+            id: _id,
+            chat_id: chatId,
+            user_id: userId,
+            data: data,
+        }).write()
+        return _id
+    }
 }
 
 export const getApplicationData = (
     botId: string,
     application: string,
-    chatId: string,
-    userId: string
-): object => {
+    chatId: number,
+    userId: number
+): object | undefined => {
+    const _appPath = ['bots', botId, application]
     return db
-        .get(['bots', botId, application])
+        .get(_appPath)
         .filter({ chat_id: chatId, user_id: userId })
         .value()
 }
@@ -73,8 +95,8 @@ export const getApplicationData = (
 export const setApplicationDataByPath = (
     botId: string,
     application: string,
-    chatId: string,
-    userId: string,
+    chatId: number,
+    userId: number,
     dataPath: [string] | [],
     value: any
 ) => {
@@ -85,7 +107,7 @@ export const setApplicationDataByPath = (
             application,
             chatId,
             userId,
-            _.set(_data, dataPath, value)
+            _.set(_data, _.concat('data', dataPath), value)
         )
     }
 }
