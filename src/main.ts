@@ -83,7 +83,8 @@ export class botUtils {
         })
     }
 
-    public addListener = (
+    // private inputListener
+    public addInputListener = (
         chatId: number,
         userId: number,
         application: string | '_global',
@@ -99,21 +100,32 @@ export class botUtils {
         chatId: number,
         userId: number,
         application: string = '_global',
-        data: object
+        data: object | null
     ): void => {
-        cache.setApplicationData(this._botId, application, chatId, userId, data)
+        cache.setApplicationUserData(
+            this._botId,
+            application,
+            chatId,
+            userId,
+            data
+        )
     }
     public getUserData = (
         chatId: number,
         userId: number,
         application: string = '_global'
-    ): object => {
-        return cache.getApplicationData(
+    ): object | null => {
+        const _data = cache.getApplicationUserData(
             this._botId,
             application,
             chatId,
             userId
-        )[0]['data']
+        )
+        if (_data.length !== 0) {
+            return _data[0]['data']
+        } else {
+            return null
+        }
     }
     private _pasCmdMsgListener: types.PasCmdMsgListener[]
     public addForceInput = (
@@ -189,12 +201,12 @@ export class botUtils {
                                 break
                             case 'registered':
                                 if (
-                                    !cache.getApplicationData(
+                                    cache.getApplicationUserData(
                                         this._botId,
                                         app.name,
                                         getChatId(msg),
                                         getUserId(msg)
-                                    )
+                                    ).length === 0
                                 ) {
                                     return
                                 }
@@ -234,6 +246,7 @@ export class botUtils {
                                         getUserId(msg),
                                         app.name
                                     )
+                                    if (_data === null) _data = {}
                                     _data = _.set(_data, path, value)
                                 }
                                 return that.setUserData(

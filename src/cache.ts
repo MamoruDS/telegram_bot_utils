@@ -5,6 +5,7 @@ import * as low from 'lowdb'
 import * as FileSync from 'lowdb/adapters/FileSync'
 
 import * as utils from './utils'
+import * as types from './types'
 
 const DATA_DIR = './data'
 
@@ -38,14 +39,15 @@ export const delCallbackData = (id: string): void => {
     db.unset(['cache', 'callback_data', id]).write()
 }
 
-export const setApplicationData = (
+export const setApplicationUserData = (
     botId: string,
     application: string,
     chatId: number,
     userId: number,
     data: object | null
 ): string | 'removed' => {
-    const _appPath = ['bots', botId, application]
+    const _appPath = ['bots', botId, application, 'userData']
+    // const _appPath = ['bots', botId, application]
     if (db.get(_appPath).value() === undefined && data !== null) {
         db.set(_appPath, []).write()
     }
@@ -81,13 +83,13 @@ export const setApplicationData = (
     }
 }
 
-export const getApplicationData = (
+export const getApplicationUserData = (
     botId: string,
     application: string,
     chatId: number,
     userId: number
-): object | undefined => {
-    const _appPath = ['bots', botId, application]
+): types.applicationUserData [] => {
+    const _appPath = ['bots', botId, application, 'userData']
     return db
         .get(_appPath)
         .filter({ chat_id: chatId, user_id: userId })
@@ -102,9 +104,9 @@ export const setApplicationDataByPath = (
     dataPath: [string] | [],
     value: any
 ) => {
-    let _data = getApplicationData(botId, application, chatId, userId)
+    let _data = getApplicationUserData(botId, application, chatId, userId)
     if (_data !== undefined) {
-        setApplicationData(
+        setApplicationUserData(
             botId,
             application,
             chatId,
