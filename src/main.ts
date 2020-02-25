@@ -12,6 +12,7 @@ export class botUtils {
     private _ownerId: number
     private _applications: types.Application[]
     private _commands: types.Command[]
+    private _inputListener: types.inputListener[]
     constructor(botId: string | number, ownerId: number = -1) {
         this._commands = [] as types.Command[]
         this._applications = [] as types.Application[]
@@ -261,6 +262,44 @@ export class botUtils {
         return null
     }
     private checkApplication = (msg: tgTypes.Message) => {}
+
+    public groupUtils = (
+        toggleByBot: boolean = false,
+        toggleBySelf: boolean = false
+    ) => {
+        const that = this
+        return {
+            joinListener(
+                msg: tgTypes.Message,
+                func: (msg: tgTypes.Message) => any
+            ) {
+                const newChatMembers = msg.new_chat_members
+                    ? msg.new_chat_members
+                    : []
+                if (newChatMembers.length !== 0) {
+                    const newChatMember = newChatMembers[0]
+                    if (newChatMember.is_bot && !toggleByBot) return
+                    if (newChatMember.id === that.getBotId() && !toggleBySelf)
+                        return
+                    func(msg)
+                }
+            },
+            leftListener(
+                msg: tgTypes.Message,
+                func: (msg: tgTypes.Message) => any
+            ) {
+                const leftMember = msg.left_chat_member
+                    ? msg.left_chat_member
+                    : undefined
+                if (leftMember) {
+                    if (leftMember.is_bot && !toggleByBot) return
+                    if (leftMember.id === that.getBotId() && !toggleBySelf)
+                        return
+                    func(msg)
+                }
+            },
+        }
+    }
 }
 
 export const getUserId = (msg: tgTypes.Message): number => {
