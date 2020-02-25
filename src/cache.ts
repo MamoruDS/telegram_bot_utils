@@ -39,6 +39,16 @@ export const delCallbackData = (id: string): void => {
     db.unset(['cache', 'callback_data', id]).write()
 }
 
+export const setBotUserId = (botId: string, botUserId: number) => {
+    db.get(['bots', botId])
+        .assign({ user_id: botUserId })
+        .write()
+}
+
+export const getBotUserId = (botId: string): number => {
+    return db.get(['bots', botId, 'user_id']).value()
+}
+
 export const setApplicationUserData = (
     botId: string,
     application: string,
@@ -46,7 +56,7 @@ export const setApplicationUserData = (
     userId: number,
     data: object | null
 ): string | 'removed' => {
-    const _appPath = ['bots', botId, application, 'userData']
+    const _appPath = ['bots', botId, 'applications', application, 'userData']
     // const _appPath = ['bots', botId, application]
     if (db.get(_appPath).value() === undefined && data !== null) {
         db.set(_appPath, []).write()
@@ -88,8 +98,8 @@ export const getApplicationUserData = (
     application: string,
     chatId: number,
     userId: number
-): types.applicationUserData [] => {
-    const _appPath = ['bots', botId, application, 'userData']
+): types.applicationUserData[] => {
+    const _appPath = ['bots', botId, 'applications', application, 'userData']
     return db
         .get(_appPath)
         .filter({ chat_id: chatId, user_id: userId })
