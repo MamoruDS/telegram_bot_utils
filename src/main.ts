@@ -4,6 +4,7 @@ import * as cache from './cache'
 import * as utils from './utils'
 import * as types from './types'
 import * as tgTypes from './tgTypes'
+import * as group from './group'
 import { cmdMatch } from './command'
 
 export class botUtils {
@@ -16,9 +17,16 @@ export class botUtils {
         this._applications = [] as types.Application[]
         this._pasCmdMsgListener = [] as types.PasCmdMsgListener[]
         this._timers = {} as types.Timers
+        this._inputListener = [] as types.inputListener[]
         this._botId = `${botId}`
         this._ownerId = ownerId
         this.addApplication('_global', 0, false)
+    }
+    public setBotId = (userId: number) => {
+        cache.setBotUserId(this._botId, userId)
+    }
+    public getBotId = (): number => {
+        return cache.getBotUserId(this._botId)
     }
     public addCommand = (
         commandStr: string,
@@ -27,7 +35,7 @@ export class botUtils {
             msg: tgTypes.Message,
             data: { get: () => object; set: (data: object) => any }
         ) => any,
-        options: types.CommandInput = defaultCmdOptions
+        options: types.CommandOptions = defaultCmdOptions
     ) => {
         if (
             _.filter(this._commands, {
@@ -82,19 +90,6 @@ export class botUtils {
             final_app: finalApp,
         })
     }
-
-    // private inputListener
-    public addInputListener = (
-        chatId: number,
-        userId: number,
-        application: string | '_global',
-        listener: () => void,
-        options: {
-            availableCount: number
-        } = {
-            availableCount: Infinity,
-        }
-    ) => void {}
 
     public setUserData = (
         chatId: number,
@@ -287,4 +282,16 @@ export const defaultCmdOptions = {
     filter: 'owner',
     filterFunction: () => true,
     description: 'undefined',
-} as types.CommandInput
+} as types.CommandOptions
+
+export const genCmdOptions = (options: types.CommandOptions) => {
+    let _options = {} as types.CommandOptions
+    for (const option of Object.keys(defaultCmdOptions)) {
+        _options[option] = _.isUndefined(options[option])
+            ? defaultCmdOptions[option]
+            : options[option]
+    }
+    return options
+}
+
+export const groupUtils = group
