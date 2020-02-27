@@ -1,22 +1,25 @@
 {
     "name": "telegram_bot_utils",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "",
+    "homepage": "https://github.com/MamoruDS/telegram_bot_utils",
+    "author": "MamoruDS",
+    "license": "MIT",
     "main": "dist/main.js",
     "directories": {
         "test": "test"
     },
     "scripts": {
+        "test": "node test/main.js",
         "compile": "tsc",
         "compile-watch": "tsc --watch"
     },
-    "author": "MamoruDS",
-    "license": "MIT",
     "devDependencies": {
-        "@types/lowdb": "^1.0.9",
+        "@types/lodash": "^4.14.149",
         "@types/node": "^13.7.2"
     },
     "dependencies": {
+        "lodash": "^4.17.15",
         "lowdb": "^1.0.0"
     }
 }
