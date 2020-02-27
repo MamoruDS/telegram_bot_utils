@@ -22,7 +22,7 @@ export interface CommandInfo {
     description: string
 }
 
-export interface CommandInput {
+export interface CommandOptions {
     application: string | '_global'
     filter: 'public' | 'registered' | 'owner'
     filterFunction: (msg: tgTypes.Message) => boolean
@@ -61,4 +61,52 @@ export interface inlineKeyboard {
     callback_data?: string
     switch_inline_query?: string
     switch_inline_query_current_chat?: string
+}
+
+export interface applicationDataMan {
+    get: (path?: string[]) => object
+    set: (data: object, path?: string[]) => any
+}
+
+export interface applicationData {
+    binds: bind[]
+    userData: applicationUserData[]
+}
+
+export interface bind {
+    chat_id: number
+}
+
+export interface applicationUserData {
+    id: string
+    chat_id: number
+    user_id: number
+    data: object
+}
+
+export interface inputListener {
+    id: string
+    chat_id: number
+    user_id: number
+    application: string
+    listener: (msg: tgTypes.Message, data: applicationDataMan) => boolean
+    available_count: number
+    final_listener: boolean
+    init_function?: (
+        chatId: number,
+        userId: number,
+        data: applicationDataMan
+    ) => any
+    final_function?: (
+        chatId: number,
+        userId: number,
+        data: applicationDataMan
+    ) => any
+}
+
+export interface inputListenerOptions {
+    availableCount: number | Infinity
+    finalListener: boolean
+    initFunction: () => any
+    finalFunction: () => any
 }
