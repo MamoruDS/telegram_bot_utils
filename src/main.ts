@@ -66,7 +66,7 @@ export class botUtils {
                 listener: listener,
                 final_listener: options.finalListener,
                 application: application,
-                avaiable_count: options.availableCount,
+                available_count: options.availableCount,
                 final_function: options.finalFunction,
             })
         } else {
@@ -223,7 +223,7 @@ export class botUtils {
         _.unset(this._timers, id)
     }
     public onMessage = (msg: tgTypes.Message) => {
-        // check pasCmdMsgListener
+        this.checkInputListener(msg)
         this.checkCommand(msg)
     }
     public checkInputListener = (msg: tgTypes.Message): void => {
@@ -236,24 +236,32 @@ export class botUtils {
                 user_id: userId,
             })) {
                 const id = inputListener.id
-                const avaiableCnt = inputListener.avaiable_count - 1
+                const avaiableCnt = inputListener.available_count - 1
                 const userData = this.userDataMan(chatId, userId, app.name)
-                inputListener.listener(msg, userData)
-                if (avaiableCnt < 1) {
+                const res = inputListener.listener(msg, userData)
+                let removeListener: boolean = false
+                if (res) {
+                    removeListener = true
+                } else {
+                    if (avaiableCnt < 1) {
+                        inputListener.final_function(chatId, userId, userData)
+                        removeListener = true
+                    } else {
+                        this._inputListeners = _.map(
+                            this._inputListeners,
+                            inputListener => {
+                                if (inputListener.id === id) {
+                                    inputListener.available_count = avaiableCnt
+                                }
+                                return inputListener
+                            }
+                        )
+                    }
+                }
+                if (removeListener) {
                     _.remove(this._inputListeners, inputListener => {
                         return inputListener.id === id
                     })
-                } else {
-                    inputListener.final_function(chatId, userId, userData)
-                    this._inputListeners = _.map(
-                        this._inputListeners,
-                        inputListener => {
-                            if (inputListener.id === id) {
-                                inputListener.avaiable_count = avaiableCnt
-                            }
-                            return inputListener
-                        }
-                    )
                 }
                 if (inputListener.final_listener) return
             }
