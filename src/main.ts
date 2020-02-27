@@ -29,6 +29,37 @@ export class botUtils {
     public getBotId = (): number => {
         return cache.getBotUserId(this._botId)
     }
+    public addInputListener = (
+        chatId: number,
+        userId: number,
+        application: string | '_global',
+        listener: (msg: tgTypes.Message, data: types.applicationDataMan) => any,
+        options: {
+            availableCount: number
+            finalListener?: boolean
+            initFunction?: (
+                chatId: number,
+                userId: number,
+                data: types.applicationDataMan
+            ) => any
+            finalFunction?: (
+                chatId: number,
+                userId: number,
+                data: types.applicationDataMan
+            ) => any
+        } = {
+            availableCount: Infinity,
+        }
+    ): void => {
+        this._inputListener.push({
+            chat_id: chatId,
+            user_id: userId,
+            listener: listener,
+            final_listener: options.finalListener,
+            application: application,
+            avaiable_count: options.availableCount,
+        })
+    }
     public addCommand = (
         commandStr: string,
         command_function: (
@@ -91,7 +122,6 @@ export class botUtils {
             final_app: finalApp,
         })
     }
-
     public setUserData = (
         chatId: number,
         userId: number,
@@ -183,7 +213,6 @@ export class botUtils {
         // check pasCmdMsgListener
         this.checkCommand(msg)
     }
-
     private checkCommand = (msg: tgTypes.Message): void => {
         const args = cmdMatch(msg.text)
         if (msg.text && args !== null) {
@@ -262,7 +291,6 @@ export class botUtils {
         return null
     }
     private checkApplication = (msg: tgTypes.Message) => {}
-
     public groupUtils = (
         toggleByBot: boolean = false,
         toggleBySelf: boolean = false
@@ -324,13 +352,42 @@ export const defaultCmdOptions = {
 } as types.CommandOptions
 
 export const genCmdOptions = (options: types.CommandOptions) => {
-    let _options = {} as types.CommandOptions
-    for (const option of Object.keys(defaultCmdOptions)) {
-        _options[option] = _.isUndefined(options[option])
-            ? defaultCmdOptions[option]
-            : options[option]
+    const _default = defaultCmdOptions
+    if (options === undefined) {
+        return _default
+    } else {
+        let _options = {} as types.CommandOptions
+        for (const option of Object.keys(_default)) {
+            _options[option] = _.isUndefined(options[option])
+                ? _default[option]
+                : options[option]
+        }
+        return _options
     }
-    return options
+}
+
+export const defaultInputListenerOptions = {
+    availableCount: Infinity,
+    finalListener: true,
+    initFunction: () => {},
+    finalFunction: () => {},
+} as types.inputListenerOptions
+
+export const genInputListenerOptions = (
+    options: types.inputListenerOptions
+) => {
+    const _default = defaultInputListenerOptions
+    if (options === undefined) {
+        return _default
+    } else {
+        let _options = {} as types.inputListenerOptions
+        for (const option of Object.keys(_default)) {
+            _options[option] = _.isUndefined(options[option])
+                ? _default[option]
+                : options[option]
+        }
+        return _options
+    }
 }
 
 export const groupUtils = group
