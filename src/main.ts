@@ -51,15 +51,27 @@ export class botUtils {
             availableCount: Infinity,
         }
     ): void => {
-        this._inputListeners.push({
-            id: utils.genId('L'),
+        const _listener = _.filter(this._inputListeners, {
+            application: application,
             chat_id: chatId,
             user_id: userId,
-            listener: listener,
-            final_listener: options.finalListener,
-            application: application,
-            avaiable_count: options.availableCount,
         })
+        const userData = this.userDataMan(chatId, userId, application)
+        if (_listener.length === 0) {
+            options.initFunction(chatId, userId, userData)
+            this._inputListeners.push({
+                id: utils.genId('L'),
+                chat_id: chatId,
+                user_id: userId,
+                listener: listener,
+                final_listener: options.finalListener,
+                application: application,
+                avaiable_count: options.availableCount,
+                final_function: options.finalFunction,
+            })
+        } else {
+            // TODO:
+        }
     }
     public addCommand = (
         commandStr: string,
@@ -213,6 +225,39 @@ export class botUtils {
     public onMessage = (msg: tgTypes.Message) => {
         // check pasCmdMsgListener
         this.checkCommand(msg)
+    }
+    public checkInputListener = (msg: tgTypes.Message): void => {
+        const chatId = getChatId(msg)
+        const userId = getUserId(msg)
+        for (const app of _.sortBy(this._applications, ['priority'])) {
+            for (const inputListener of _.filter(this._inputListeners, {
+                application: app.name,
+                chat_id: chatId,
+                user_id: userId,
+            })) {
+                const id = inputListener.id
+                const avaiableCnt = inputListener.avaiable_count - 1
+                const userData = this.userDataMan(chatId, userId, app.name)
+                inputListener.listener(msg, userData)
+                if (avaiableCnt < 1) {
+                    _.remove(this._inputListeners, inputListener => {
+                        return inputListener.id === id
+                    })
+                } else {
+                    inputListener.final_function(chatId, userId, userData)
+                    this._inputListeners = _.map(
+                        this._inputListeners,
+                        inputListener => {
+                            if (inputListener.id === id) {
+                                inputListener.avaiable_count = avaiableCnt
+                            }
+                            return inputListener
+                        }
+                    )
+                }
+                if (inputListener.final_listener) return
+            }
+        }
     }
     private checkCommand = (msg: tgTypes.Message): void => {
         const chatId = getChatId(msg)
