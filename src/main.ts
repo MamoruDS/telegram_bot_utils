@@ -12,13 +12,13 @@ export class botUtils {
     private _ownerId: number
     private _applications: types.Application[]
     private _commands: types.Command[]
-    private _inputListener: types.inputListener[]
+    private _inputListeners: types.inputListener[]
     constructor(botId: string | number, ownerId: number = -1) {
         this._commands = [] as types.Command[]
         this._applications = [] as types.Application[]
         this._pasCmdMsgListener = [] as types.PasCmdMsgListener[]
         this._timers = {} as types.Timers
-        this._inputListener = [] as types.inputListener[]
+        this._inputListeners = [] as types.inputListener[]
         this._botId = `${botId}`
         this._ownerId = ownerId
         this.addApplication('_global', 0, false)
@@ -51,7 +51,8 @@ export class botUtils {
             availableCount: Infinity,
         }
     ): void => {
-        this._inputListener.push({
+        this._inputListeners.push({
+            id: utils.genId('L'),
             chat_id: chatId,
             user_id: userId,
             listener: listener,
@@ -214,6 +215,8 @@ export class botUtils {
         this.checkCommand(msg)
     }
     private checkCommand = (msg: tgTypes.Message): void => {
+        const chatId = getChatId(msg)
+        const userId = getUserId(msg)
         const args = cmdMatch(msg.text)
         if (msg.text && args !== null) {
             for (const app of _.sortBy(this._applications, ['priority'])) {
@@ -229,8 +232,8 @@ export class botUtils {
                                     cache.getApplicationUserData(
                                         this._botId,
                                         app.name,
-                                        getChatId(msg),
-                                        getUserId(msg)
+                                        chatId,
+                                        userId
                                     ).length === 0
                                 ) {
                                     return
@@ -249,39 +252,11 @@ export class botUtils {
                             default:
                                 return
                         }
-                        const that = this
-                        const userData = {
-                            get(path?: string[]) {
-                                const _data = that.getUserData(
-                                    getChatId(msg),
-                                    getUserId(msg),
-                                    app.name
-                                )
-                                if (path) {
-                                    return _.get(_data, path)
-                                } else {
-                                    return _data
-                                }
-                            },
-                            set(value, path?: string[]) {
-                                let _data = value
-                                if (path) {
-                                    _data = that.getUserData(
-                                        getChatId(msg),
-                                        getUserId(msg),
-                                        app.name
-                                    )
-                                    if (_data === null) _data = {}
-                                    _data = _.set(_data, path, value)
-                                }
-                                return that.setUserData(
-                                    getChatId(msg),
-                                    getUserId(msg),
-                                    app.name,
-                                    _data
-                                )
-                            },
-                        }
+                        const userData = this.userDataMan(
+                            chatId,
+                            userId,
+                            app.name
+                        )
                         cmd.command_function(args, msg, userData)
                         return
                     }
@@ -325,6 +300,32 @@ export class botUtils {
                         return
                     func(msg)
                 }
+            },
+        }
+    }
+    public userDataMan = (
+        chatId,
+        userId,
+        applicationName = '_global'
+    ): types.applicationDataMan => {
+        const that = this
+        return {
+            get(path?: string[]) {
+                const _data = that.getUserData(chatId, userId, applicationName)
+                if (Array.isArray(path) && path.length !== 0) {
+                    return _.get(_data, path)
+                } else {
+                    return _data
+                }
+            },
+            set(value, path?: string[]) {
+                let _data = value
+                if (Array.isArray(path) && path.length !== 0) {
+                    _data = that.getUserData(chatId, userId, applicationName)
+                    if (_data === null) _data = {}
+                    _data = _.set(_data, path, value)
+                }
+                return that.setUserData(chatId, userId, applicationName, _data)
             },
         }
     }
