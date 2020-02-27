@@ -25,7 +25,7 @@ export interface CommandInfo {
 export interface CommandOptions {
     application: string | '_global'
     filter: 'public' | 'registered' | 'owner'
-    filterFunction: (msg: tgTypes.Message) => boolean
+    filter_function: (msg: tgTypes.Message) => boolean
     description: string
 }
 
@@ -105,8 +105,16 @@ export interface inputListener {
 }
 
 export interface inputListenerOptions {
-    availableCount: number | Infinity
-    finalListener: boolean
-    initFunction: () => any
-    finalFunction: () => any
+    available_count?: number | Infinity
+    final_listener?: boolean
+    init_function?: (
+        chatId: number,
+        userId: number,
+        data: applicationDataMan
+    ) => any
+    final_function?: (
+        chatId: number,
+        userId: number,
+        data: applicationDataMan
+    ) => any
 }
