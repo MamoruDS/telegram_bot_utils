@@ -17,7 +17,7 @@ export interface User {
 // https://core.telegram.org/bots/api#chat
 export interface Chat {
     readonly id: Integer
-    readonly type: string
+    readonly type: 'private' | 'group' | 'supergroup' | 'channel'
     readonly title?: string
     readonly username?: string
     readonly first_name?: string

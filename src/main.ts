@@ -34,7 +34,10 @@ export class botUtils {
         chat: telegram.Chat,
         user: telegram.User,
         application: string | '_global',
-        listener: (msg: telegram.Message, data: types.applicationDataMan) => any,
+        listener: (
+            msg: telegram.Message,
+            data: types.applicationDataMan
+        ) => any,
         options?: types.inputListenerOptions
     ): void => {
         const _options = defaults.options_input_listener(options)
