@@ -1,5 +1,5 @@
 import * as types from './types'
-import * as tgTypes from './tgTypes'
+import * as telegram from './telegram'
 
 const maxLineWidth = 50
 
@@ -8,7 +8,7 @@ export const genInlineKYBDBtnWithData = (text, callback_data) => {
 }
 
 export class InlineKeyboard {
-    private _btnGrp: tgTypes.InlineKeyboardButton[][]
+    private _btnGrp: telegram.InlineKeyboardButton[][]
     private _lineWidth: number[]
     private _curLine: number
 
@@ -26,7 +26,7 @@ export class InlineKeyboard {
     }
 
     public addKeyboardButton(
-        inlineKeyboardButton: tgTypes.InlineKeyboardButton,
+        inlineKeyboardButton: telegram.InlineKeyboardButton,
         isNewLine?: boolean,
         isAutoAppend?: boolean
     ): void {
@@ -56,7 +56,7 @@ export class InlineKeyboard {
         return
     }
 
-    public getInlineKeyBoard(): tgTypes.InlineKeyboardButton[][] {
+    public getInlineKeyBoard(): telegram.InlineKeyboardButton[][] {
         return this._btnGrp
     }
 }

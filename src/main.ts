@@ -3,7 +3,7 @@ import * as _ from 'lodash'
 import * as cache from './cache'
 import * as utils from './utils'
 import * as types from './types'
-import * as tgTypes from './tgTypes'
+import * as telegram from './telegram'
 import * as group from './group'
 import { cmdMatch } from './command'
 import * as defaults from './defaults'
@@ -31,25 +31,25 @@ export class botUtils {
         return cache.getBotUserId(this._botId)
     }
     public addInputListener = (
-        chatId: number,
-        userId: number,
+        chat: telegram.Chat,
+        user: telegram.User,
         application: string | '_global',
-        listener: (msg: tgTypes.Message, data: types.applicationDataMan) => any,
+        listener: (msg: telegram.Message, data: types.applicationDataMan) => any,
         options?: types.inputListenerOptions
     ): void => {
         const _options = defaults.options_input_listener(options)
         const _listener = _.filter(this._inputListeners, {
             application: application,
-            chat_id: chatId,
-            user_id: userId,
+            chat_id: chat.id,
+            user_id: user.id,
         })
-        const userData = this.userDataMan(chatId, userId, application)
+        const userData = this.userDataMan(chat.id, user.id, application)
         if (_listener.length === 0) {
-            _options.init_function(chatId, userId, userData)
+            _options.init_function(chat, user, userData)
             this._inputListeners.push({
                 id: utils.genId('L'),
-                chat_id: chatId,
-                user_id: userId,
+                chat_id: chat.id,
+                user_id: user.id,
                 application: application,
                 listener: listener,
                 available_count: _options.available_count,
@@ -66,7 +66,7 @@ export class botUtils {
         commandStr: string,
         command_function: (
             args: string[],
-            msg: tgTypes.Message,
+            msg: telegram.Message,
             data: { get: () => object; set: (data: object) => any }
         ) => any,
         options?: types.CommandOptions
@@ -212,14 +212,14 @@ export class botUtils {
     public removeTimer = (id: string): void => {
         _.unset(this._timers, id)
     }
-    public onMessage = (msg: tgTypes.Message) => {
+    public onMessage = (msg: telegram.Message) => {
         const _listenerRes = this.checkInputListener(msg)
         if (_listenerRes.passToCommand) {
             this.checkCommand(msg)
         }
     }
     public checkInputListener = (
-        msg: tgTypes.Message
+        msg: telegram.Message
     ): {
         passToCommand: boolean
     } => {
@@ -234,6 +234,7 @@ export class botUtils {
                 chat_id: chatId,
                 user_id: userId,
             })[0]
+            if (inputListener === undefined) continue
             const id = inputListener.id
             const avaiableCnt = inputListener.available_count - 1
             const userData = this.userDataMan(chatId, userId, app.name)
@@ -243,7 +244,8 @@ export class botUtils {
                 removeListener = true
             } else {
                 if (avaiableCnt < 1) {
-                    inputListener.final_function(chatId, userId, userData)
+                    inputListener.final_function(msg.chat, msg.from, userData)
+                    // inputListener.final_function(chatId, userId, userData)
                     removeListener = true
                 } else {
                     this._inputListeners = _.map(
@@ -267,7 +269,7 @@ export class botUtils {
         }
         return _res
     }
-    private checkCommand = (msg: tgTypes.Message): void => {
+    private checkCommand = (msg: telegram.Message): void => {
         const chatId = getChatId(msg)
         const userId = getUserId(msg)
         const args = cmdMatch(msg.text)
@@ -318,7 +320,7 @@ export class botUtils {
         }
         return null
     }
-    private checkApplication = (msg: tgTypes.Message) => {}
+    private checkApplication = (msg: telegram.Message) => {}
     public groupUtils = (
         toggleByBot: boolean = false,
         toggleBySelf: boolean = false
@@ -326,8 +328,8 @@ export class botUtils {
         const that = this
         return {
             joinListener(
-                msg: tgTypes.Message,
-                func: (msg: tgTypes.Message) => any
+                msg: telegram.Message,
+                func: (msg: telegram.Message) => any
             ) {
                 const newChatMembers = msg.new_chat_members
                     ? msg.new_chat_members
@@ -341,8 +343,8 @@ export class botUtils {
                 }
             },
             leftListener(
-                msg: tgTypes.Message,
-                func: (msg: tgTypes.Message) => any
+                msg: telegram.Message,
+                func: (msg: telegram.Message) => any
             ) {
                 const leftMember = msg.left_chat_member
                     ? msg.left_chat_member
@@ -384,19 +386,19 @@ export class botUtils {
     }
 }
 
-export const getUserId = (msg: tgTypes.Message): number => {
+export const getUserId = (msg: telegram.Message): number => {
     if (msg.from) {
         return msg.from.id
     }
 }
 
-export const getChatId = (msg: tgTypes.Message): number => {
+export const getChatId = (msg: telegram.Message): number => {
     if (msg.chat) {
         return msg.chat.id
     }
 }
 
-export const getMessageId = (msg: tgTypes.Message): number => {
+export const getMessageId = (msg: telegram.Message): number => {
     return msg.message_id
 }
 

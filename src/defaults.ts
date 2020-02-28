@@ -1,7 +1,7 @@
 import * as _ from 'lodash'
 
 import { inputListenerOptions, CommandOptions } from './types'
-import * as tgTypes from './tgTypes'
+import * as telegram from './telegram'
 
 export const getOptions = (
     defaultOptions: object,
@@ -21,7 +21,7 @@ export const getOptions = (
     }
 }
 
-export const chat_permissions_unrestricted: tgTypes.ChatPermissions = {
+export const chat_permissions_unrestricted: telegram.ChatPermissions = {
     can_send_messages: true,
     can_send_media_messages: true,
     can_send_polls: true,
@@ -32,7 +32,7 @@ export const chat_permissions_unrestricted: tgTypes.ChatPermissions = {
     can_pin_messages: true,
 }
 
-export const chat_permissions_fully_restricted: tgTypes.ChatPermissions = {
+export const chat_permissions_fully_restricted: telegram.ChatPermissions = {
     can_send_messages: false,
     can_send_media_messages: false,
     can_send_polls: false,

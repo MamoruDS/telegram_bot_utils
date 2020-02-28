@@ -1,4 +1,4 @@
-import * as tgTypes from './tgTypes'
+import * as telegram from './telegram'
 
 type CommandFilter = 'public' | 'registered' | 'owner' | 'function'
 
@@ -6,12 +6,12 @@ export interface Command {
     command_string: string
     command_function: (
         args: string[],
-        msg: tgTypes.Message,
+        msg: telegram.Message,
         data: { get: () => object; set: (data: object) => any }
     ) => any
     application?: string | '_global'
     filter: CommandFilter
-    filter_function?: (msg: tgTypes.Message) => boolean
+    filter_function?: (msg: telegram.Message) => boolean
     description?: string
 }
 
@@ -25,7 +25,7 @@ export interface CommandInfo {
 export interface CommandOptions {
     application: string | '_global'
     filter: 'public' | 'registered' | 'owner'
-    filter_function: (msg: tgTypes.Message) => boolean
+    filter_function: (msg: telegram.Message) => boolean
     description: string
 }
 
@@ -84,39 +84,29 @@ export interface applicationUserData {
     data: object
 }
 
+type listenerAutoFunc = (
+    chat: telegram.Chat,
+    user: telegram.User,
+    data: applicationDataMan
+) => any
+
 export interface inputListener {
     id: string
     chat_id: number
     user_id: number
     application: string
-    listener: (msg: tgTypes.Message, data: applicationDataMan) => boolean
+    listener: (msg: telegram.Message, data: applicationDataMan) => boolean
     available_count: number
     pass_to_other_listener: boolean
     pass_to_command: boolean
-    init_function: (
-        chatId: number,
-        userId: number,
-        data: applicationDataMan
-    ) => any
-    final_function: (
-        chatId: number,
-        userId: number,
-        data: applicationDataMan
-    ) => any
+    init_function: listenerAutoFunc
+    final_function: listenerAutoFunc
 }
 
 export interface inputListenerOptions {
     available_count?: number | Infinity
     pass_to_other_listener?: boolean
     pass_to_command?: boolean
-    init_function?: (
-        chatId: number,
-        userId: number,
-        data: applicationDataMan
-    ) => any
-    final_function?: (
-        chatId: number,
-        userId: number,
-        data: applicationDataMan
-    ) => any
+    init_function?: listenerAutoFunc
+    final_function?: listenerAutoFunc
 }

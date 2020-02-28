@@ -1,4 +1,4 @@
-import { Message } from './tgTypes'
+import { Message } from './telegram'
 
 export const joinListener = (msg: Message, func: (msg: Message) => any) => {
     const newMembers = msg.new_chat_members ? msg.new_chat_members : []
