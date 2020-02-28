@@ -1,8 +1,6 @@
 import * as _ from 'lodash'
 
-import * as types from './types'
 import { inputListenerOptions, CommandOptions } from './types'
-// import * as tgTypes from './tgTypes'
 import * as tgTypes from './tgTypes'
 
 export const getOptions = (
@@ -47,7 +45,8 @@ export const chat_permissions_fully_restricted: tgTypes.ChatPermissions = {
 
 const defaultInputListenerOptions = {
     available_count: Infinity,
-    final_listener: true,
+    pass_to_other_listener: true,
+    pass_to_command: true,
     init_function: () => {},
     final_function: () => {},
 } as inputListenerOptions

@@ -91,13 +91,14 @@ export interface inputListener {
     application: string
     listener: (msg: tgTypes.Message, data: applicationDataMan) => boolean
     available_count: number
-    final_listener: boolean
-    init_function?: (
+    pass_to_other_listener: boolean
+    pass_to_command: boolean
+    init_function: (
         chatId: number,
         userId: number,
         data: applicationDataMan
     ) => any
-    final_function?: (
+    final_function: (
         chatId: number,
         userId: number,
         data: applicationDataMan
@@ -106,7 +107,8 @@ export interface inputListener {
 
 export interface inputListenerOptions {
     available_count?: number | Infinity
-    final_listener?: boolean
+    pass_to_other_listener?: boolean
+    pass_to_command?: boolean
     init_function?: (
         chatId: number,
         userId: number,

@@ -6,6 +6,7 @@ import * as types from './types'
 import * as tgTypes from './tgTypes'
 import * as group from './group'
 import { cmdMatch } from './command'
+import * as defaults from './defaults'
 
 export class botUtils {
     private _botId: string
@@ -34,23 +35,9 @@ export class botUtils {
         userId: number,
         application: string | '_global',
         listener: (msg: tgTypes.Message, data: types.applicationDataMan) => any,
-        options: {
-            availableCount: number
-            finalListener?: boolean
-            initFunction?: (
-                chatId: number,
-                userId: number,
-                data: types.applicationDataMan
-            ) => any
-            finalFunction?: (
-                chatId: number,
-                userId: number,
-                data: types.applicationDataMan
-            ) => any
-        } = {
-            availableCount: Infinity,
-        }
+        options?: types.inputListenerOptions
     ): void => {
+        const _options = defaults.options_input_listener(options)
         const _listener = _.filter(this._inputListeners, {
             application: application,
             chat_id: chatId,
@@ -58,16 +45,18 @@ export class botUtils {
         })
         const userData = this.userDataMan(chatId, userId, application)
         if (_listener.length === 0) {
-            options.initFunction(chatId, userId, userData)
+            _options.init_function(chatId, userId, userData)
             this._inputListeners.push({
                 id: utils.genId('L'),
                 chat_id: chatId,
                 user_id: userId,
-                listener: listener,
-                final_listener: options.finalListener,
                 application: application,
-                available_count: options.availableCount,
-                final_function: options.finalFunction,
+                listener: listener,
+                available_count: _options.available_count,
+                pass_to_other_listener: _options.pass_to_other_listener,
+                pass_to_command: _options.pass_to_command,
+                init_function: _options.init_function,
+                final_function: _options.final_function,
             })
         } else {
             // TODO:
@@ -80,21 +69,22 @@ export class botUtils {
             msg: tgTypes.Message,
             data: { get: () => object; set: (data: object) => any }
         ) => any,
-        options: types.CommandOptions = defaultCmdOptions
+        options?: types.CommandOptions
     ) => {
+        const _options = defaults.options_command(options)
         if (
             _.filter(this._commands, {
                 command_string: commandStr,
-                application: options.application,
+                application: _options.application,
             }).length === 0
         ) {
             this._commands.push({
                 command_string: commandStr,
                 command_function: command_function,
-                application: options.application,
-                filter: options.filter,
-                filter_function: options.filterFunction,
-                description: options.description,
+                application: _options.application,
+                filter: _options.filter,
+                filter_function: _options.filter_function,
+                description: _options.description,
             })
         } else {
             // TODO:
@@ -223,49 +213,59 @@ export class botUtils {
         _.unset(this._timers, id)
     }
     public onMessage = (msg: tgTypes.Message) => {
-        this.checkInputListener(msg)
-        this.checkCommand(msg)
+        const _listenerRes = this.checkInputListener(msg)
+        if (_listenerRes.passToCommand) {
+            this.checkCommand(msg)
+        }
     }
-    public checkInputListener = (msg: tgTypes.Message): void => {
+    public checkInputListener = (
+        msg: tgTypes.Message
+    ): {
+        passToCommand: boolean
+    } => {
+        let _res = {
+            passToCommand: true,
+        }
         const chatId = getChatId(msg)
         const userId = getUserId(msg)
         for (const app of _.sortBy(this._applications, ['priority'])) {
-            for (const inputListener of _.filter(this._inputListeners, {
+            const inputListener = _.filter(this._inputListeners, {
                 application: app.name,
                 chat_id: chatId,
                 user_id: userId,
-            })) {
-                const id = inputListener.id
-                const avaiableCnt = inputListener.available_count - 1
-                const userData = this.userDataMan(chatId, userId, app.name)
-                const res = inputListener.listener(msg, userData)
-                let removeListener: boolean = false
-                if (res) {
+            })[0]
+            const id = inputListener.id
+            const avaiableCnt = inputListener.available_count - 1
+            const userData = this.userDataMan(chatId, userId, app.name)
+            const res = inputListener.listener(msg, userData)
+            let removeListener: boolean = false
+            if (res) {
+                removeListener = true
+            } else {
+                if (avaiableCnt < 1) {
+                    inputListener.final_function(chatId, userId, userData)
                     removeListener = true
                 } else {
-                    if (avaiableCnt < 1) {
-                        inputListener.final_function(chatId, userId, userData)
-                        removeListener = true
-                    } else {
-                        this._inputListeners = _.map(
-                            this._inputListeners,
-                            inputListener => {
-                                if (inputListener.id === id) {
-                                    inputListener.available_count = avaiableCnt
-                                }
-                                return inputListener
+                    this._inputListeners = _.map(
+                        this._inputListeners,
+                        inputListener => {
+                            if (inputListener.id === id) {
+                                inputListener.available_count = avaiableCnt
                             }
-                        )
-                    }
+                            return inputListener
+                        }
+                    )
                 }
-                if (removeListener) {
-                    _.remove(this._inputListeners, inputListener => {
-                        return inputListener.id === id
-                    })
-                }
-                if (inputListener.final_listener) return
             }
+            if (removeListener) {
+                _.remove(this._inputListeners, inputListener => {
+                    return inputListener.id === id
+                })
+            }
+            if (!inputListener.pass_to_command) _res.passToCommand = false
+            if (!inputListener.pass_to_other_listener) break
         }
+        return _res
     }
     private checkCommand = (msg: tgTypes.Message): void => {
         const chatId = getChatId(msg)
@@ -389,59 +389,15 @@ export const getUserId = (msg: tgTypes.Message): number => {
         return msg.from.id
     }
 }
+
 export const getChatId = (msg: tgTypes.Message): number => {
     if (msg.chat) {
         return msg.chat.id
     }
 }
+
 export const getMessageId = (msg: tgTypes.Message): number => {
     return msg.message_id
-}
-
-export const defaultCmdOptions = {
-    application: '_global',
-    filter: 'owner',
-    filterFunction: () => true,
-    description: 'undefined',
-} as types.CommandOptions
-
-export const genCmdOptions = (options: types.CommandOptions) => {
-    const _default = defaultCmdOptions
-    if (options === undefined) {
-        return _default
-    } else {
-        let _options = {} as types.CommandOptions
-        for (const option of Object.keys(_default)) {
-            _options[option] = _.isUndefined(options[option])
-                ? _default[option]
-                : options[option]
-        }
-        return _options
-    }
-}
-
-export const defaultInputListenerOptions = {
-    availableCount: Infinity,
-    finalListener: true,
-    initFunction: () => {},
-    finalFunction: () => {},
-} as types.inputListenerOptions
-
-export const genInputListenerOptions = (
-    options: types.inputListenerOptions
-) => {
-    const _default = defaultInputListenerOptions
-    if (options === undefined) {
-        return _default
-    } else {
-        let _options = {} as types.inputListenerOptions
-        for (const option of Object.keys(_default)) {
-            _options[option] = _.isUndefined(options[option])
-                ? _default[option]
-                : options[option]
-        }
-        return _options
-    }
 }
 
 export const groupUtils = group
