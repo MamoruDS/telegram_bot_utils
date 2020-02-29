@@ -1,5 +1,21 @@
 import * as telegram from './telegram'
 
+export const linkFree = 0
+type LinkFree = 0
+
+export const appGlobal = '_global'
+type AppGlobal = '_global'
+
+export type dataLink = {
+    chat_id: number | LinkFree
+    user_id: number | LinkFree
+}
+
+export type dataLinkLess = {
+    chat_id?: number | LinkFree
+    user_id?: number | LinkFree
+}
+
 type CommandFilter = 'public' | 'registered' | 'owner' | 'function'
 
 export interface Command {
@@ -9,7 +25,9 @@ export interface Command {
         msg: telegram.Message,
         data: { get: () => object; set: (data: object) => any }
     ) => any
-    application?: string | '_global'
+    application_name?: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
     filter: CommandFilter
     filter_function?: (msg: telegram.Message) => boolean
     description?: string
@@ -17,14 +35,16 @@ export interface Command {
 
 export interface CommandInfo {
     command_string: string
-    application: string
+    application_name: string
     filter: CommandFilter
     description: string
 }
 
 export interface CommandOptions {
-    application: string | '_global'
-    filter: 'public' | 'registered' | 'owner'
+    application_name: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
+    filter: CommandFilter
     filter_function: (msg: telegram.Message) => boolean
     description: string
 }
@@ -94,8 +114,10 @@ export interface inputListener {
     id: string
     chat_id: number
     user_id: number
-    application: string
     listener: (msg: telegram.Message, data: applicationDataMan) => boolean
+    application_name: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
     available_count: number
     pass_to_other_listener: boolean
     pass_to_command: boolean
@@ -104,6 +126,9 @@ export interface inputListener {
 }
 
 export interface inputListenerOptions {
+    application_name: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
     available_count?: number | Infinity
     pass_to_other_listener?: boolean
     pass_to_command?: boolean

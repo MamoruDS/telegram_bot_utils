@@ -1,6 +1,7 @@
 import * as _ from 'lodash'
 
 import { inputListenerOptions, CommandOptions } from './types'
+import * as types from './types'
 import * as telegram from './telegram'
 
 export const getOptions = (
@@ -44,6 +45,9 @@ export const chat_permissions_fully_restricted: telegram.ChatPermissions = {
 }
 
 const defaultInputListenerOptions = {
+    application_name: types.appGlobal,
+    link_chat_free: false,
+    link_user_free: false,
     available_count: Infinity,
     pass_to_other_listener: true,
     pass_to_command: true,
@@ -62,7 +66,9 @@ export const options_input_listener = (
 }
 
 const defaultCommandOptions = {
-    application: '_global',
+    application_name: types.appGlobal,
+    link_chat_free: false,
+    link_user_free: false,
     filter: 'owner',
     filter_function: () => true,
     description: 'undefined',
