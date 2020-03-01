@@ -17,7 +17,7 @@ export class botUtils {
     constructor(botId: string | number, ownerId: number = -1) {
         this._commands = [] as types.Command[]
         this._applications = [] as types.Application[]
-        this._pasCmdMsgListener = [] as types.PasCmdMsgListener[]
+        // this._pasCmdMsgListener = [] as types.PasCmdMsgListener[]
         this._timers = {} as types.Timers
         this._inputListeners = [] as types.inputListener[]
         this._botId = `${botId}`
@@ -33,7 +33,6 @@ export class botUtils {
     public addInputListener = (
         chat: telegram.Chat,
         user: telegram.User,
-        application: string | '_global',
         listener: (
             msg: telegram.Message,
             data: types.applicationDataMan
@@ -42,19 +41,27 @@ export class botUtils {
     ): void => {
         const _options = defaults.options_input_listener(options)
         const _listener = _.filter(this._inputListeners, {
-            application: application,
-            chat_id: chat.id,
-            user_id: user.id,
+            application_name: _options.application_name,
+            chat_id: _options.link_chat_free ? types.linkFree : chat.id,
+            user_id: _options.link_user_free ? types.linkFree : user.id,
         })
-        const userData = this.userDataMan(chat.id, user.id, application)
+        const applicationData = this.applicationDataMan(
+            _options.application_name,
+            {
+                chat_id: _options.link_chat_free ? types.linkFree : chat.id,
+                user_id: _options.link_user_free ? types.linkFree : user.id,
+            }
+        )
         if (_listener.length === 0) {
-            _options.init_function(chat, user, userData)
+            _options.init_function(chat, user, applicationData)
             this._inputListeners.push({
                 id: utils.genId('L'),
                 chat_id: chat.id,
                 user_id: user.id,
-                application: application,
                 listener: listener,
+                application_name: _options.application_name,
+                link_chat_free: _options.link_chat_free,
+                link_user_free: _options.link_user_free,
                 available_count: _options.available_count,
                 pass_to_other_listener: _options.pass_to_other_listener,
                 pass_to_command: _options.pass_to_command,
@@ -78,13 +85,15 @@ export class botUtils {
         if (
             _.filter(this._commands, {
                 command_string: commandStr,
-                application: _options.application,
+                application_name: _options.application_name,
             }).length === 0
         ) {
             this._commands.push({
                 command_string: commandStr,
                 command_function: command_function,
-                application: _options.application,
+                application_name: _options.application_name,
+                link_chat_free: _options.link_chat_free,
+                link_user_free: _options.link_user_free,
                 filter: _options.filter,
                 filter_function: _options.filter_function,
                 description: _options.description,
@@ -95,22 +104,24 @@ export class botUtils {
     }
     public removeCommand = (
         commandStr: string,
-        application: string = '_global'
+        applicationName: string = '_global'
     ) => {
         _.remove(this._commands, c => {
             return (
-                c.command_string === commandStr && c.application === application
+                c.command_string === commandStr &&
+                c.application_name === applicationName
             )
         })
     }
     public getCommands = (): { [appName: string]: types.CommandInfo[] } => {
         let cmds = {} as { [appName: string]: types.CommandInfo[] }
         for (const c of this._commands) {
-            const app = c.application
-            if (!_.hasIn(cmds, app)) cmds[app] = [] as types.CommandInfo[]
-            cmds[app].push({
+            const appName = c.application_name
+            if (!_.hasIn(cmds, appName))
+                cmds[appName] = [] as types.CommandInfo[]
+            cmds[appName].push({
                 command_string: c.command_string,
-                application: c.application,
+                application_name: c.application_name,
                 filter: c.filter,
                 description: c.description,
             })
@@ -118,40 +129,49 @@ export class botUtils {
         return cmds
     }
     public addApplication = (
-        appName: string,
+        applicationName: string,
         priority: number,
         finalApp: boolean
     ) => {
         this._applications.push({
-            name: appName,
+            name: applicationName,
             priority: priority,
             final_app: finalApp,
         })
     }
-    public setUserData = (
-        chatId: number,
-        userId: number,
-        application: string = '_global',
-        data: object | null
+    public setApplicationData = (
+        applicationName: string = '_global',
+        data: object | null,
+        link: types.dataLinkLess = {}
     ): void => {
-        cache.setApplicationUserData(
-            this._botId,
-            application,
-            chatId,
-            userId,
-            data
-        )
+        const chatId = _.isUndefined(link.chat_id)
+            ? types.linkFree
+            : link.chat_id
+        const userId = _.isUndefined(link.user_id)
+            ? types.linkFree
+            : link.user_id
+        cache.setApplicationUserData(this._botId, applicationName, data, {
+            chat_id: chatId,
+            user_id: userId,
+        })
     }
-    public getUserData = (
-        chatId: number,
-        userId: number,
-        application: string = '_global'
+    public getApplicationData = (
+        applicationName: string = '_global',
+        link: types.dataLinkLess = {}
     ): object | null => {
+        const chatId = _.isUndefined(link.chat_id)
+            ? types.linkFree
+            : link.chat_id
+        const userId = _.isUndefined(link.user_id)
+            ? types.linkFree
+            : link.user_id
         const _data = cache.getApplicationUserData(
             this._botId,
-            application,
-            chatId,
-            userId
+            applicationName,
+            {
+                chat_id: chatId,
+                user_id: userId,
+            }
         )
         if (_data.length !== 0) {
             return _data[0]['data']
@@ -159,39 +179,39 @@ export class botUtils {
             return null
         }
     }
-    private _pasCmdMsgListener: types.PasCmdMsgListener[]
-    public addForceInput = (
-        chatId: number,
-        userId: number,
-        verifyFunc: (chatId: number, userId: number) => boolean,
-        errMsg?: (availableCount: number | types.Infinity) => string,
-        errMsgReply: boolean = false,
-        availableCnt: number = Infinity
-    ): void => {
-        if (
-            _.findIndex(this._pasCmdMsgListener, {
-                chat_id: chatId,
-                user_id: userId,
-            }) !== -1
-        )
-            return
-        this._pasCmdMsgListener.push({
-            chat_id: chatId,
-            user_id: userId,
-            verify_function: verifyFunc,
-            error_message: errMsg,
-            error_message_reply: errMsgReply,
-            available_count: availableCnt,
-            // renew func
-        })
-    }
-    public removeForceInput = (chatId: number, userId: number): void => {
-        const _index = _.findIndex(this._pasCmdMsgListener, {
-            chat_id: chatId,
-            user_id: userId,
-        })
-        if (_index !== -1) this._pasCmdMsgListener.splice(_index, 1)
-    }
+    // private _pasCmdMsgListener: types.PasCmdMsgListener[]
+    // public addForceInput = (
+    //     chatId: number,
+    //     userId: number,
+    //     verifyFunc: (chatId: number, userId: number) => boolean,
+    //     errMsg?: (availableCount: number | types.Infinity) => string,
+    //     errMsgReply: boolean = false,
+    //     availableCnt: number = Infinity
+    // ): void => {
+    //     if (
+    //         _.findIndex(this._pasCmdMsgListener, {
+    //             chat_id: chatId,
+    //             user_id: userId,
+    //         }) !== -1
+    //     )
+    //         return
+    //     this._pasCmdMsgListener.push({
+    //         chat_id: chatId,
+    //         user_id: userId,
+    //         verify_function: verifyFunc,
+    //         error_message: errMsg,
+    //         error_message_reply: errMsgReply,
+    //         available_count: availableCnt,
+    //         // renew func
+    //     })
+    // }
+    // public removeForceInput = (chatId: number, userId: number): void => {
+    //     const _index = _.findIndex(this._pasCmdMsgListener, {
+    //         chat_id: chatId,
+    //         user_id: userId,
+    //     })
+    //     if (_index !== -1) this._pasCmdMsgListener.splice(_index, 1)
+    // }
     private _timers: types.Timers
     public addTimer = (
         action: () => any,
@@ -232,23 +252,34 @@ export class botUtils {
         const chatId = getChatId(msg)
         const userId = getUserId(msg)
         for (const app of _.sortBy(this._applications, ['priority'])) {
-            const inputListener = _.filter(this._inputListeners, {
-                application: app.name,
-                chat_id: chatId,
-                user_id: userId,
-            })[0]
+            const inputListener = _.filter(
+                this._inputListeners,
+                inputListener => {
+                    return (
+                        checkValue(chatId, inputListener['chat_id'], 0) &&
+                        checkValue(userId, inputListener['user_id'], 0) &&
+                        checkValue(app.name, inputListener['application'])
+                    )
+                }
+            )[0]
             if (inputListener === undefined) continue
             const id = inputListener.id
             const avaiableCnt = inputListener.available_count - 1
-            const userData = this.userDataMan(chatId, userId, app.name)
-            const res = inputListener.listener(msg, userData)
+            const applicationData = this.applicationDataMan(app.name, {
+                chat_id: inputListener.link_chat_free ? types.linkFree : chatId,
+                user_id: inputListener.link_user_free ? types.linkFree : userId,
+            })
+            const res = inputListener.listener(msg, applicationData)
             let removeListener: boolean = false
             if (res) {
                 removeListener = true
             } else {
                 if (avaiableCnt < 1) {
-                    inputListener.final_function(msg.chat, msg.from, userData)
-                    // inputListener.final_function(chatId, userId, userData)
+                    inputListener.final_function(
+                        msg.chat,
+                        msg.from,
+                        applicationData
+                    )
                     removeListener = true
                 } else {
                     this._inputListeners = _.map(
@@ -279,7 +310,7 @@ export class botUtils {
         if (msg.text && args !== null) {
             for (const app of _.sortBy(this._applications, ['priority'])) {
                 for (const cmd of _.filter(this._commands, {
-                    application: app.name,
+                    application_name: app.name,
                 })) {
                     if (args[0] === cmd.command_string) {
                         switch (cmd.filter) {
@@ -287,12 +318,10 @@ export class botUtils {
                                 break
                             case 'registered':
                                 if (
-                                    cache.getApplicationUserData(
-                                        this._botId,
-                                        app.name,
-                                        chatId,
-                                        userId
-                                    ).length === 0
+                                    this.getApplicationData(app.name, {
+                                        chat_id: chatId,
+                                        user_id: userId,
+                                    }) === null
                                 ) {
                                     return
                                 }
@@ -310,12 +339,18 @@ export class botUtils {
                             default:
                                 return
                         }
-                        const userData = this.userDataMan(
-                            chatId,
-                            userId,
-                            app.name
+                        const applicationData = this.applicationDataMan(
+                            app.name,
+                            {
+                                chat_id: cmd.link_chat_free
+                                    ? types.linkFree
+                                    : chatId,
+                                user_id: cmd.link_user_free
+                                    ? types.linkFree
+                                    : userId,
+                            }
                         )
-                        cmd.command_function(args, msg, userData)
+                        cmd.command_function(args, msg, applicationData)
                         return
                     }
                 }
@@ -323,7 +358,6 @@ export class botUtils {
         }
         return null
     }
-    private checkApplication = (msg: telegram.Message) => {}
     public groupUtils = (
         toggleByBot: boolean = false,
         toggleBySelf: boolean = false
@@ -361,15 +395,14 @@ export class botUtils {
             },
         }
     }
-    public userDataMan = (
-        chatId,
-        userId,
-        applicationName = '_global'
+    public applicationDataMan = (
+        applicationName: string | '_global',
+        link: types.dataLinkLess = {}
     ): types.applicationDataMan => {
         const that = this
         return {
             get(path?: string[]) {
-                const _data = that.getUserData(chatId, userId, applicationName)
+                const _data = that.getApplicationData(applicationName, link)
                 if (Array.isArray(path) && path.length !== 0) {
                     return _.get(_data, path)
                 } else {
@@ -379,11 +412,11 @@ export class botUtils {
             set(value, path?: string[]) {
                 let _data = value
                 if (Array.isArray(path) && path.length !== 0) {
-                    _data = that.getUserData(chatId, userId, applicationName)
+                    _data = that.getApplicationData(applicationName, link)
                     if (_data === null) _data = {}
                     _data = _.set(_data, path, value)
                 }
-                return that.setUserData(chatId, userId, applicationName, _data)
+                return that.setApplicationData(applicationName, _data, link)
             },
         }
     }
@@ -403,6 +436,18 @@ export const getChatId = (msg: telegram.Message): number => {
 
 export const getMessageId = (msg: telegram.Message): number => {
     return msg.message_id
+}
+
+export const checkValue = (
+    inputId: string | number,
+    checkId: string | number,
+    exception?: string | number
+) => {
+    return (
+        inputId !== undefined &&
+        checkId !== undefined &&
+        (inputId === checkId || checkId === exception)
+    )
 }
 
 export const groupUtils = group
