@@ -52,9 +52,8 @@ export const getBotUserId = (botId: string): number => {
 export const setApplicationUserData = (
     botId: string,
     application: string,
-    chatId: number,
-    userId: number,
-    data: object | null
+    data: object | null = null,
+    link: types.dataLink
 ): string | 'removed' => {
     const _appPath = ['bots', botId, 'applications', application, 'userData']
     // const _appPath = ['bots', botId, application]
@@ -63,7 +62,7 @@ export const setApplicationUserData = (
     }
     let _data = db
         .get(_appPath)
-        .find({ chat_id: chatId, user_id: userId })
+        .find({ chat_id: link.chat_id, user_id: link.user_id })
         .value()
     if (_data !== undefined) {
         if (data === null) {
@@ -84,8 +83,8 @@ export const setApplicationUserData = (
         db.get(_appPath)
             .push({
                 id: _id,
-                chat_id: chatId,
-                user_id: userId,
+                chat_id: link.chat_id,
+                user_id: link.user_id,
                 data: data,
             })
             .write()
@@ -96,32 +95,32 @@ export const setApplicationUserData = (
 export const getApplicationUserData = (
     botId: string,
     application: string,
-    chatId: number,
-    userId: number
+    link: types.dataLink
 ): types.applicationUserData[] => {
     const _appPath = ['bots', botId, 'applications', application, 'userData']
     return db
         .get(_appPath)
-        .filter({ chat_id: chatId, user_id: userId })
+        .filter({ chat_id: link.chat_id, user_id: link.user_id })
         .value()
 }
 
 export const setApplicationDataByPath = (
     botId: string,
     application: string,
-    chatId: number,
-    userId: number,
+    value: any,
     dataPath: [string] | [],
-    value: any
+    link: types.dataLink
 ) => {
-    let _data = getApplicationUserData(botId, application, chatId, userId)
+    let _data = getApplicationUserData(botId, application, {
+        chat_id: link.chat_id,
+        user_id: link.user_id,
+    })
     if (_data !== undefined) {
         setApplicationUserData(
             botId,
             application,
-            chatId,
-            userId,
-            _.set(_data, _.concat('data', dataPath), value)
+            _.set(_data, _.concat('data', dataPath), value),
+            { chat_id: link.chat_id, user_id: link.user_id }
         )
     }
 }
