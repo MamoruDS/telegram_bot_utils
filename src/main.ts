@@ -5,7 +5,7 @@ import * as utils from './utils'
 import * as types from './types'
 import * as telegram from './telegram'
 import * as group from './group'
-import { cmdMatch } from './command'
+import { cmdMatch, argumentCheck } from './command'
 import * as defaults from './defaults'
 
 export class botUtils {
@@ -92,6 +92,8 @@ export class botUtils {
                 command_string: commandStr,
                 command_function: command_function,
                 application_name: _options.application_name,
+                argument_check: _options.argument_check,
+                argument_error_function: _options.argument_error_function,
                 link_chat_free: _options.link_chat_free,
                 link_user_free: _options.link_user_free,
                 filter: _options.filter,
@@ -205,7 +207,7 @@ export class botUtils {
         applicationName: string,
         chatId: number
     ): boolean => {
-        if(applicationName===types.appGlobal) return true
+        if (applicationName === types.appGlobal) return true
         const _binds = this.getApplicationBinds(applicationName)
         return _binds.indexOf(chatId) === -1 ? false : true
     }
@@ -334,7 +336,7 @@ export class botUtils {
         }
         return _res
     }
-    private checkCommand = (msg: telegram.Message): void => {
+    private checkCommand = async (msg: telegram.Message): Promise<void> => {
         const chatId = getChatId(msg)
         const userId = getUserId(msg)
         const args = cmdMatch(msg.text)
@@ -345,6 +347,14 @@ export class botUtils {
                     application_name: app.name,
                 })) {
                     if (args[0] === cmd.command_string) {
+                        const _args = await argumentCheck(
+                            args,
+                            cmd.argument_check
+                        ).catch(err => {
+                            cmd.argument_error_function(msg, err)
+                            return []
+                        })
+                        if (_args.length === 0) return
                         switch (cmd.filter) {
                             case 'public':
                                 break
@@ -382,7 +392,7 @@ export class botUtils {
                                     : userId,
                             }
                         )
-                        cmd.command_function(args, msg, applicationData)
+                        cmd.command_function(_args, msg, applicationData)
                         return
                     }
                 }
