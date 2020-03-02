@@ -6,6 +6,27 @@ type LinkFree = 0
 export const appGlobal = '_global'
 type AppGlobal = '_global'
 
+export type Infinity = number
+type Timestamp = number
+
+export interface Application {
+    name: string
+    priority: number
+    final_app: boolean
+}
+
+export interface applicationUserData {
+    id: string
+    chat_id: number
+    user_id: number
+    data: object
+}
+
+export interface applicationDataMan {
+    get: (path?: string[]) => object
+    set: (data: object, path?: string[]) => any
+}
+
 export type dataLink = {
     chat_id: number | LinkFree
     user_id: number | LinkFree
@@ -18,6 +39,13 @@ export type dataLinkLess = {
 
 type CommandFilter = 'public' | 'registered' | 'owner' | 'function'
 
+export interface ArgumentCheck {
+    type: 'string' | 'integer' | 'float' | 'boolean'
+    default_value?: string | number | boolean
+    range?: any[] | 'function'
+    range_function?: (arg: any) => Promise<boolean> | Promise<Error>
+}
+
 export interface Command {
     command_string: string
     command_function: (
@@ -26,10 +54,12 @@ export interface Command {
         data: { get: () => object; set: (data: object) => any }
     ) => any
     application_name?: string | AppGlobal
+    argument_check: ArgumentCheck[]
+    argument_error_function: (msg: telegram.Message, err: Error) => any
     link_chat_free: boolean
     link_user_free: boolean
     filter: CommandFilter
-    filter_function?: (msg: telegram.Message) => boolean
+    filter_function?: (msg: telegram.Message) => Promise<boolean>
     description?: string
 }
 
@@ -42,20 +72,14 @@ export interface CommandInfo {
 
 export interface CommandOptions {
     application_name: string | AppGlobal
+    argument_check: ArgumentCheck[]
+    argument_error_function: (msg: telegram.Message, err: Error) => any
     link_chat_free: boolean
     link_user_free: boolean
     filter: CommandFilter
-    filter_function: (msg: telegram.Message) => boolean
+    filter_function: (msg: telegram.Message) => Promise<boolean>
     description: string
 }
-
-export interface Application {
-    name: string
-    priority: number
-    final_app: boolean
-}
-
-export type Infinity = number
 
 export interface PasCmdMsgListener {
     chat_id: number
@@ -64,44 +88,6 @@ export interface PasCmdMsgListener {
     error_message?: (availableCount: number | Infinity) => string
     error_message_reply?: boolean
     available_count?: number
-}
-
-type Timestamp = number
-
-export interface Timers {
-    [timerId: string]: {
-        action: string
-        start_timestamp: Timestamp
-    }
-}
-
-export interface inlineKeyboard {
-    text: string
-    url?: string
-    callback_data?: string
-    switch_inline_query?: string
-    switch_inline_query_current_chat?: string
-}
-
-export interface applicationDataMan {
-    get: (path?: string[]) => object
-    set: (data: object, path?: string[]) => any
-}
-
-export interface applicationData {
-    binds: bind[]
-    userData: applicationUserData[]
-}
-
-export interface bind {
-    chat_id: number
-}
-
-export interface applicationUserData {
-    id: string
-    chat_id: number
-    user_id: number
-    data: object
 }
 
 type listenerAutoFunc = (
@@ -134,4 +120,19 @@ export interface inputListenerOptions {
     pass_to_command?: boolean
     init_function?: listenerAutoFunc
     final_function?: listenerAutoFunc
+}
+
+export interface Timers {
+    [timerId: string]: {
+        action: string
+        start_timestamp: Timestamp
+    }
+}
+
+export interface inlineKeyboard {
+    text: string
+    url?: string
+    callback_data?: string
+    switch_inline_query?: string
+    switch_inline_query_current_chat?: string
 }
