@@ -132,14 +132,15 @@ export class botUtils {
         applicationName: string,
         priority: number,
         finalApp: boolean
-    ) => {
+    ): void => {
         this._applications.push({
             name: applicationName,
             priority: priority,
             final_app: finalApp,
         })
+        cache.initApplication(this._botId, applicationName)
     }
-    public setApplicationData = (
+    public setApplicationUserData = (
         applicationName: string = '_global',
         data: object | null,
         link: types.dataLinkLess = {}
@@ -155,7 +156,7 @@ export class botUtils {
             user_id: userId,
         })
     }
-    public getApplicationData = (
+    public getApplicationUserData = (
         applicationName: string = '_global',
         link: types.dataLinkLess = {}
     ): object | null => {
@@ -178,6 +179,35 @@ export class botUtils {
         } else {
             return null
         }
+    }
+    public setApplicationBind = (
+        applicationName: string,
+        chatId: number,
+        unbind?: boolean
+    ): number[] => {
+        let _binds: number[] = cache.getApplicationBinds(
+            this._botId,
+            applicationName
+        )
+        if (unbind) {
+            _.remove(_binds, bind => {
+                return bind === chatId
+            })
+        } else {
+            _binds = _.union(_binds, [chatId])
+        }
+        return cache.setApplicationBinds(this._botId, applicationName, _binds)
+    }
+    public getApplicationBinds = (applicationName: string): number[] => {
+        return cache.getApplicationBinds(this._botId, applicationName)
+    }
+    private checkApplicationBind = (
+        applicationName: string,
+        chatId: number
+    ): boolean => {
+        if(applicationName===types.appGlobal) return true
+        const _binds = this.getApplicationBinds(applicationName)
+        return _binds.indexOf(chatId) === -1 ? false : true
     }
     // private _pasCmdMsgListener: types.PasCmdMsgListener[]
     // public addForceInput = (
@@ -252,6 +282,7 @@ export class botUtils {
         const chatId = getChatId(msg)
         const userId = getUserId(msg)
         for (const app of _.sortBy(this._applications, ['priority'])) {
+            if (!this.checkApplicationBind(app.name, chatId)) continue
             const inputListener = _.filter(
                 this._inputListeners,
                 inputListener => {
@@ -309,6 +340,7 @@ export class botUtils {
         const args = cmdMatch(msg.text)
         if (msg.text && args !== null) {
             for (const app of _.sortBy(this._applications, ['priority'])) {
+                if (!this.checkApplicationBind(app.name, chatId)) continue
                 for (const cmd of _.filter(this._commands, {
                     application_name: app.name,
                 })) {
@@ -318,7 +350,7 @@ export class botUtils {
                                 break
                             case 'registered':
                                 if (
-                                    this.getApplicationData(app.name, {
+                                    this.getApplicationUserData(app.name, {
                                         chat_id: chatId,
                                         user_id: userId,
                                     }) === null
@@ -402,7 +434,7 @@ export class botUtils {
         const that = this
         return {
             get(path?: string[]) {
-                const _data = that.getApplicationData(applicationName, link)
+                const _data = that.getApplicationUserData(applicationName, link)
                 if (Array.isArray(path) && path.length !== 0) {
                     return _.get(_data, path)
                 } else {
@@ -412,11 +444,11 @@ export class botUtils {
             set(value, path?: string[]) {
                 let _data = value
                 if (Array.isArray(path) && path.length !== 0) {
-                    _data = that.getApplicationData(applicationName, link)
+                    _data = that.getApplicationUserData(applicationName, link)
                     if (_data === null) _data = {}
                     _data = _.set(_data, path, value)
                 }
-                return that.setApplicationData(applicationName, _data, link)
+                return that.setApplicationUserData(applicationName, _data, link)
             },
         }
     }
