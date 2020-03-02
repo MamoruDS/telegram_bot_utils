@@ -8,7 +8,7 @@ export const getOptions = (
     defaultOptions: object,
     userDefinedOptions?: object
 ): object => {
-    let _options = defaultOptions
+    let _options = Object.assign({}, defaultOptions)
     if (userDefinedOptions === undefined) {
         return _options
     } else {
@@ -67,10 +67,12 @@ export const options_input_listener = (
 
 const defaultCommandOptions = {
     application_name: types.appGlobal,
+    argument_check: [],
+    argument_error_function: () => {},
     link_chat_free: false,
     link_user_free: false,
     filter: 'owner',
-    filter_function: () => true,
+    filter_function: async () => true,
     description: 'undefined',
 } as CommandOptions
 
