@@ -17,7 +17,6 @@ export class botUtils {
     constructor(botId: string | number, ownerId: number = -1) {
         this._commands = [] as types.Command[]
         this._applications = [] as types.Application[]
-        // this._pasCmdMsgListener = [] as types.PasCmdMsgListener[]
         this._timers = {} as types.Timers
         this._inputListeners = [] as types.inputListener[]
         this._botId = `${botId}`
@@ -211,39 +210,6 @@ export class botUtils {
         const _binds = this.getApplicationBinds(applicationName)
         return _binds.indexOf(chatId) === -1 ? false : true
     }
-    // private _pasCmdMsgListener: types.PasCmdMsgListener[]
-    // public addForceInput = (
-    //     chatId: number,
-    //     userId: number,
-    //     verifyFunc: (chatId: number, userId: number) => boolean,
-    //     errMsg?: (availableCount: number | types.Infinity) => string,
-    //     errMsgReply: boolean = false,
-    //     availableCnt: number = Infinity
-    // ): void => {
-    //     if (
-    //         _.findIndex(this._pasCmdMsgListener, {
-    //             chat_id: chatId,
-    //             user_id: userId,
-    //         }) !== -1
-    //     )
-    //         return
-    //     this._pasCmdMsgListener.push({
-    //         chat_id: chatId,
-    //         user_id: userId,
-    //         verify_function: verifyFunc,
-    //         error_message: errMsg,
-    //         error_message_reply: errMsgReply,
-    //         available_count: availableCnt,
-    //         // renew func
-    //     })
-    // }
-    // public removeForceInput = (chatId: number, userId: number): void => {
-    //     const _index = _.findIndex(this._pasCmdMsgListener, {
-    //         chat_id: chatId,
-    //         user_id: userId,
-    //     })
-    //     if (_index !== -1) this._pasCmdMsgListener.splice(_index, 1)
-    // }
     private _timers: types.Timers
     public addTimer = (
         action: () => any,
