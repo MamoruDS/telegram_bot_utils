@@ -49,6 +49,28 @@ export const getBotUserId = (botId: string): number => {
     return db.get(['bots', botId, 'user_id']).value()
 }
 
+export const initApplication = (botId: string, applicationName: string) => {
+    setApplicationBinds(botId, applicationName, [])
+}
+
+export const setApplicationBinds = (
+    botId: string,
+    applicationName: string,
+    binds: number[]
+): number[] => {
+    const _bindsPath = ['bots', botId, 'applications', applicationName, 'binds']
+    db.set(_bindsPath, binds).write()
+    return db.get(_bindsPath).value()
+}
+
+export const getApplicationBinds = (
+    botId: string,
+    applicationName: string
+): number[] => {
+    const _bindsPath = ['bots', botId, 'applications', applicationName, 'binds']
+    return db.get(_bindsPath).value()
+}
+
 export const setApplicationUserData = (
     botId: string,
     application: string,
