@@ -136,3 +136,22 @@ export interface inlineKeyboard {
     switch_inline_query?: string
     switch_inline_query_current_chat?: string
 }
+
+type ArgumentUndefined = 0
+type ArgumentParseError = 1
+type ArgumentOutRange = 2
+export const BotUtilsError = {
+    ArgumentUndefined: 0,
+    ArgumentParseError: 1,
+    ArgumentOutRange: 2,
+}
+
+export type ErrorType =
+    | ArgumentUndefined
+    | ArgumentParseError
+    | ArgumentOutRange
+
+export interface ERR {
+    error_type: ErrorType
+    error_message: string
+}
