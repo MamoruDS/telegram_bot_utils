@@ -1,7 +1,7 @@
 import * as _ from 'lodash'
 
 const idFormat = {
-    prefix_length_min: 0,
+    prefix_length_min: 1,
     prefix_length_max: 4,
     suffix_length_min: 10,
     suffix_length_max: 10,
@@ -11,7 +11,7 @@ const idFormat = {
 }
 
 const idRegex = new RegExp(
-    /((^\w{1,})-|)(\w{1,})-([A-F\d]{1,})-(\w{1,})(-(\w{1,})|)$/,
+    `((^\\w{${idFormat.prefix_length_min},${idFormat.prefix_length_max}})-|^)(\\w{1,${idFormat.phrase_1_length}})-([A-F\\d]{1,})-(\\w{1,${idFormat.phrase_1_length}})(-(\\w{${idFormat.suffix_length_min},${idFormat.suffix_length_max}})$|$)`,
     'gm'
 )
 
