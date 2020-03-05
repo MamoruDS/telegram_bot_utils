@@ -1,10 +1,38 @@
 import * as types from './types'
+import * as cache from './cache'
 import * as telegram from './telegram'
 
 const maxLineWidth = 50
 
-export const genInlineKYBDBtnWithData = (text, callback_data) => {
-    return {}
+export const getInlineKeyBoard = () => {}
+
+const getInlineKYBDBtnWithUrl = (
+    text: string,
+    url: string,
+    redir?: boolean
+): telegram.InlineKeyboardButton => {
+    const _url = redir
+        ? `https://mamoruds.github.io/redir_page/?redir=${encodeURIComponent(
+              url
+          )}`
+        : url
+    const keyButton: telegram.InlineKeyboardButton = {
+        text: text,
+        url: _url,
+    }
+    return keyButton
+}
+
+const getInlineKYBDBtnWithCallbackData = (
+    text: string,
+    callback_data: any
+): telegram.InlineKeyboardButton => {
+    const id = cache.setCallbackData(JSON.stringify({ data: callback_data }))
+    const keyButton: telegram.InlineKeyboardButton = {
+        text: text,
+        callback_data: id,
+    }
+    return keyButton
 }
 
 export class InlineKeyboard {
