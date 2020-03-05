@@ -5,8 +5,11 @@ import * as utils from './utils'
 import * as types from './types'
 import * as telegram from './telegram'
 import * as group from './group'
+import * as inlineKYBD from './inlineKeyboard'
 import { cmdMatch, argumentCheck } from './command'
 import * as defaults from './defaults'
+
+export const inlineKYBDUtils = inlineKYBD
 
 export class botUtils {
     private _botId: string
@@ -457,5 +460,3 @@ export const checkValue = (
         (inputId === checkId || checkId === exception)
     )
 }
-
-export const groupUtils = group
