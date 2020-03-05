@@ -5,19 +5,24 @@ import * as utils from './utils'
 import * as types from './types'
 import * as telegram from './telegram'
 import * as group from './group'
-import * as inlineKYBD from './inlineKeyboard'
+import * as keyboardUtils from './keyboardUtils'
 import { cmdMatch, argumentCheck } from './command'
 import * as defaults from './defaults'
 
-export const inlineKYBDUtils = inlineKYBD
-
-export class botUtils {
+export class BotUtils {
     private _botId: string
     private _ownerId: number
     private _applications: types.Application[]
     private _commands: types.Command[]
     private _inputListeners: types.inputListener[]
-    constructor(botId: string | number, ownerId: number = -1) {
+    // private _flushCachedCallbackData: boolean
+    constructor(
+        botId: string | number,
+        ownerId: number = -1
+        // options: {
+        //     flushCallbackDataCache?: boolean
+        // } = {}
+    ) {
         this._commands = [] as types.Command[]
         this._applications = [] as types.Application[]
         this._timers = {} as types.Timers
@@ -25,6 +30,10 @@ export class botUtils {
         this._botId = `${botId}`
         this._ownerId = ownerId
         this.addApplication('_global', 0, false)
+        // if (options && options.flushCallbackDataCache){
+        //     this._flushCachedCallbackData = true
+
+        // }
     }
     public setBotId = (userId: number) => {
         cache.setBotUserId(this._botId, userId)
@@ -430,6 +439,11 @@ export class botUtils {
                 return that.setApplicationUserData(applicationName, _data, link)
             },
         }
+    }
+    public genInlineKeyBoard = (
+        buttons: types.inlineKeyboardButton[]
+    ): telegram.InlineKeyboardButton[][] => {
+        return keyboardUtils.genInlineKeyBoard(this._botId, buttons)
     }
 }
 
