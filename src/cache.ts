@@ -25,18 +25,16 @@ const db = low(adapter)
 
 db.defaults({ bots: {}, cache: { callback_data: {} } }).write()
 
-export const setCallbackData = (data: string): string => {
-    const id = utils.genId('C')
-    db.set(['cache', 'callback_data', id], data).write()
-    return id
+export const setCallbackData = (id: string, data: string | null): void => {
+    if (data === null) {
+        db.unset(['cache', 'callback_data', id]).write()
+    } else {
+        db.set(['cache', 'callback_data', id], data).write()
+    }
 }
 
 export const getCallbackData = (id: string): string => {
     return db.get(['cache', 'callback_data', id]).value()
-}
-
-export const delCallbackData = (id: string): void => {
-    db.unset(['cache', 'callback_data', id]).write()
 }
 
 export const setBotUserId = (botId: string, botUserId: number) => {
@@ -50,7 +48,8 @@ export const getBotUserId = (botId: string): number => {
 }
 
 export const initApplication = (botId: string, applicationName: string) => {
-    setApplicationBinds(botId, applicationName, [])
+    const binds = getApplicationBinds(botId, applicationName)
+    if (binds === undefined) setApplicationBinds(botId, applicationName, [])
 }
 
 export const setApplicationBinds = (
