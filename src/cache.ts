@@ -25,16 +25,20 @@ const db = low(adapter)
 
 db.defaults({ bots: {}, cache: { callback_data: {} } }).write()
 
-export const setCallbackData = (id: string, data: string | null): void => {
+export const setCallbackData = (
+    botId: string,
+    id: string,
+    data: string | null
+): void => {
     if (data === null) {
-        db.unset(['cache', 'callback_data', id]).write()
+        db.unset(['bots', botId, 'callback_data', id]).write()
     } else {
-        db.set(['cache', 'callback_data', id], data).write()
+        db.set(['bots', botId, 'callback_data', id], data).write()
     }
 }
 
-export const getCallbackData = (id: string): string => {
-    return db.get(['cache', 'callback_data', id]).value()
+export const getCallbackData = (botId: string, id: string): string => {
+    return db.get(['bots', botId, 'callback_data', id]).value()
 }
 
 export const setBotUserId = (botId: string, botUserId: number) => {
