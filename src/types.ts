@@ -129,29 +129,40 @@ export interface Timers {
     }
 }
 
-export interface inlineKeyboard {
+export const maxInlineWidth = 20
+
+export interface inlineKeyboardButton {
     text: string
     url?: string
-    callback_data?: string
+    url_redir?: boolean
+    callback_data?: any
     switch_inline_query?: string
     switch_inline_query_current_chat?: string
+    keyboard_row_full_width?: boolean
+    keyboard_row_auto_append?: boolean
 }
 
-type ArgumentUndefined = 0
+type ArgumentRequiredError = 0
 type ArgumentParseError = 1
-type ArgumentOutRange = 2
+type ArgumentRangeError = 2
 export const BotUtilsError = {
-    ArgumentUndefined: 0,
+    ArgumentRequiredError: 0,
     ArgumentParseError: 1,
-    ArgumentOutRange: 2,
+    ArgumentRangeError: 2,
 }
 
-export type ErrorType =
-    | ArgumentUndefined
-    | ArgumentParseError
-    | ArgumentOutRange
+export type ErrorType = number
 
 export interface ERR {
     error_type: ErrorType
-    error_message: string
+    error_message?: string
+}
+
+export class ArgumentTypeError extends Error {
+    public errCode: number
+    constructor(errCode, msg) {
+        super(msg)
+        this.name = 'wtfError'
+        this.errCode = errCode
+    }
 }
