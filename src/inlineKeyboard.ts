@@ -2,9 +2,33 @@ import * as types from './types'
 import * as cache from './cache'
 import * as telegram from './telegram'
 
-const maxLineWidth = 50
+const maxLineWidth = types.maxInlineWidth
 
-export const getInlineKeyBoard = () => {}
+export const getInlineKeyBoard = (
+    buttons: types.inlineKeyboardButton[]
+): telegram.InlineKeyboardButton[][] => {
+    if (buttons.length === 0) return undefined
+    const keyBoard = new InlineKeyboard()
+    for (const btn of buttons) {
+        if (btn.url) {
+            keyBoard.addKeyboardButton(
+                getInlineKYBDBtnWithUrl(btn.text, btn.url, btn.url_redir),
+                btn.keyboard_row_full_width,
+                btn.keyboard_row_auto_append
+            )
+            continue
+        }
+        if (btn.callback_data) {
+            keyBoard.addKeyboardButton(
+                getInlineKYBDBtnWithCallbackData(btn.text, btn.callback_data),
+                btn.keyboard_row_full_width,
+                btn.keyboard_row_auto_append
+            )
+            continue
+        }
+    }
+    return keyBoard.getInlineKeyBoard()
+}
 
 const getInlineKYBDBtnWithUrl = (
     text: string,
@@ -16,6 +40,7 @@ const getInlineKYBDBtnWithUrl = (
               url
           )}`
         : url
+    // more details on https://github.com/MamoruDS/redir_page
     const keyButton: telegram.InlineKeyboardButton = {
         text: text,
         url: _url,
@@ -59,7 +84,7 @@ export class InlineKeyboard {
         isAutoAppend?: boolean
     ): void {
         if (isNewLine) {
-            this.addLine()
+            if (this._lineWidth[this._curLine] !== 0) this.addLine()
             this._btnGrp[this._curLine].push(inlineKeyboardButton)
             this._lineWidth[this._curLine] = Infinity
             return
