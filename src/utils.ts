@@ -1,6 +1,7 @@
 import * as _ from 'lodash'
 
 const idFormat = {
+    ts_radix: 16,
     prefix_length_min: 1,
     prefix_length_max: 4,
     suffix_length_min: 10,
@@ -25,12 +26,26 @@ export const genRandom = (length: number): string => {
 export const genId = (prefix?: string, suffix?: string) => {
     return `${prefix ? `${prefix}-` : ''}${genRandom(
         idFormat.phrase_1_length
-    )}-${Date.now().toString(16)}-${genRandom(idFormat.phrase_2_length)}${
-        suffix ? `-${suffix}` : ''
-    }`.toUpperCase()
+    )}-${Date.now().toString(idFormat.ts_radix)}-${genRandom(
+        idFormat.phrase_2_length
+    )}${suffix ? `-${suffix}` : ''}`.toUpperCase()
 }
 
-export const parseId = (id: string) => {}
+interface IdInfo {
+    match: boolean
+    ts?: number
+    prefix?: string
+    suffix?: string
+}
+
+export const parseId = (id: string): IdInfo => {
+    let _res = { match: false } as IdInfo
+    const _regex = idRegex.exec(id)
+    if (_regex === null) return _res
+    _res.ts = parseInt(_regex[4], idFormat.ts_radix)
+    _res.prefix = _regex[2]
+    _res.suffix = _regex[7]
+}
 
 export class GroupId {
     private readonly _group: string
