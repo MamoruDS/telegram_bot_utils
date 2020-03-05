@@ -1,4 +1,5 @@
 import * as types from './types'
+import * as utils from './utils'
 import * as cache from './cache'
 import * as telegram from './telegram'
 
@@ -9,6 +10,7 @@ export const getInlineKeyBoard = (
 ): telegram.InlineKeyboardButton[][] => {
     if (buttons.length === 0) return undefined
     const keyBoard = new InlineKeyboard()
+    const group = new utils.GroupId('C')
     for (const btn of buttons) {
         if (btn.url) {
             keyBoard.addKeyboardButton(
@@ -20,7 +22,11 @@ export const getInlineKeyBoard = (
         }
         if (btn.callback_data) {
             keyBoard.addKeyboardButton(
-                getInlineKYBDBtnWithCallbackData(btn.text, btn.callback_data),
+                getInlineKYBDBtnWithCallbackData(
+                    btn.text,
+                    btn.callback_data,
+                    group
+                ),
                 btn.keyboard_row_full_width,
                 btn.keyboard_row_auto_append
             )
@@ -50,9 +56,11 @@ const getInlineKYBDBtnWithUrl = (
 
 const getInlineKYBDBtnWithCallbackData = (
     text: string,
-    callback_data: any
+    callback_data: any,
+    group: utils.GroupId
 ): telegram.InlineKeyboardButton => {
-    const id = cache.setCallbackData(JSON.stringify({ data: callback_data }))
+    const id = group.genId()
+    cache.setCallbackData(id, JSON.stringify({ data: callback_data }))
     const keyButton: telegram.InlineKeyboardButton = {
         text: text,
         callback_data: id,
