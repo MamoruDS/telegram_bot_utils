@@ -5,7 +5,8 @@ import * as telegram from './telegram'
 
 const maxLineWidth = types.maxInlineWidth
 
-export const getInlineKeyBoard = (
+export const genInlineKeyBoard = (
+    botId: string,
     buttons: types.inlineKeyboardButton[]
 ): telegram.InlineKeyboardButton[][] => {
     if (buttons.length === 0) return undefined
@@ -14,7 +15,7 @@ export const getInlineKeyBoard = (
     for (const btn of buttons) {
         if (btn.url) {
             keyBoard.addKeyboardButton(
-                getInlineKYBDBtnWithUrl(btn.text, btn.url, btn.url_redir),
+                genInlineKYBDBtnWithUrl(btn.text, btn.url, btn.url_redir),
                 btn.keyboard_row_full_width,
                 btn.keyboard_row_auto_append
             )
@@ -22,9 +23,10 @@ export const getInlineKeyBoard = (
         }
         if (btn.callback_data) {
             keyBoard.addKeyboardButton(
-                getInlineKYBDBtnWithCallbackData(
+                genInlineKYBDBtnWithCallbackData(
                     btn.text,
                     btn.callback_data,
+                    botId,
                     group
                 ),
                 btn.keyboard_row_full_width,
@@ -36,7 +38,7 @@ export const getInlineKeyBoard = (
     return keyBoard.getInlineKeyBoard()
 }
 
-const getInlineKYBDBtnWithUrl = (
+const genInlineKYBDBtnWithUrl = (
     text: string,
     url: string,
     redir?: boolean
@@ -54,13 +56,14 @@ const getInlineKYBDBtnWithUrl = (
     return keyButton
 }
 
-const getInlineKYBDBtnWithCallbackData = (
+const genInlineKYBDBtnWithCallbackData = (
     text: string,
     callback_data: any,
+    botId: string,
     group: utils.GroupId
 ): telegram.InlineKeyboardButton => {
     const id = group.genId()
-    cache.setCallbackData(id, JSON.stringify({ data: callback_data }))
+    cache.setCallbackData(botId, id, JSON.stringify({ data: callback_data }))
     const keyButton: telegram.InlineKeyboardButton = {
         text: text,
         callback_data: id,
