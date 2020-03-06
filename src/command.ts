@@ -34,9 +34,10 @@ export const argumentCheck = async (
         if (_arg === undefined) {
             const _defaultValue = checker[i].default_value
             if (_defaultValue === undefined) {
-                const err: ERR = {
-                    error_type: BotUtilsError.ArgumentUndefined,
-                }
+                // const err: ERR = {
+                    // error_type: BotUtilsError.ArgumentUndefined,
+                // }
+                // TODO: error adv
                 throw new TypeError(
                     `Required argument (args[${indexFixed}]) do not exist.`
                 )

@@ -249,23 +249,23 @@ export interface File {
 
 // https://core.telegram.org/bots/api#replykeyboardmarkup
 export interface ReplyKeyboardMarkup {
-    readonly keyboard: KeyboardButton[][]
-    readonly resize_keyboard?: boolean
-    readonly one_time_keyboard?: boolean
-    readonly selective?: boolean
+    keyboard: KeyboardButton[][]
+    resize_keyboard?: boolean
+    one_time_keyboard?: boolean
+    selective?: boolean
 }
 
 // https://core.telegram.org/bots/api#keyboardbutton
 export interface KeyboardButton {
-    readonly text: string
-    readonly request_contact?: boolean
-    readonly request_location?: boolean
-    readonly request_poll?: KeyboardButtonPollType
+    text: string
+    request_contact?: boolean
+    request_location?: boolean
+    request_poll?: KeyboardButtonPollType
 }
 
 // https://core.telegram.org/bots/api#keyboardbuttonpolltype
 export interface KeyboardButtonPollType {
-    readonly type?: string | 'quiz' | 'regular'
+    type?: string | 'quiz' | 'regular'
 }
 
 // https://core.telegram.org/bots/api#replykeyboardremove
@@ -276,19 +276,19 @@ export interface ReplyKeyboardRemove {
 
 // https://core.telegram.org/bots/api#inlinekeyboardmarkup
 export interface InlineKeyboardMarkup {
-    readonly inline_keyboard: InlineKeyboardButton[][]
+    inline_keyboard: InlineKeyboardButton[][]
 }
 
 // https://core.telegram.org/bots/api#inlinekeyboardbutton
 export interface InlineKeyboardButton {
-    readonly text: string
-    readonly url?: string
-    readonly login_url?: LoginUrl
-    readonly callback_data?: string
-    readonly switch_inline_query?: string
-    readonly switch_inline_query_current_chat?: string
-    readonly callback_game?: CallbackGame
-    readonly pay?: boolean
+    text: string
+    url?: string
+    login_url?: LoginUrl
+    callback_data?: string
+    switch_inline_query?: string
+    switch_inline_query_current_chat?: string
+    callback_game?: CallbackGame
+    pay?: boolean
 }
 
 // https://core.telegram.org/bots/api#loginurl

@@ -142,6 +142,15 @@ export interface inlineKeyboardButton {
     keyboard_row_auto_append?: boolean
 }
 
+export type callbackData = any | CallbackDataDefined
+
+interface CallbackDataDefined {
+    is_defined_data: true
+    application_name: string
+    action_name: string
+    data: any
+}
+
 type ArgumentRequiredError = 0
 type ArgumentParseError = 1
 type ArgumentRangeError = 2
@@ -162,7 +171,7 @@ export class ArgumentTypeError extends Error {
     public errCode: number
     constructor(errCode, msg) {
         super(msg)
-        this.name = 'wtfError'
+        // this.name = 'wtfError'
         this.errCode = errCode
     }
 }
