@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "module": "commonjs",
+        "moduleResolution": "node",
         "outDir": "dist",
         "removeComments": true,
         "target": "ES2017",
