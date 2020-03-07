@@ -245,15 +245,18 @@ export class BotUtils {
     public removeTimer = (id: string): void => {
         _.unset(this._timers, id)
     }
-    public onMessage = (msg: telegram.Message) => {
+    public onMessage = (
+        msg: telegram.Message,
+        expireDelay: number = Infinity
+    ): void => {
+        const _delay = Math.floor(Date.now() / 1000) - msg.date
+        if (_delay > expireDelay) return
         const _listenerRes = this.checkInputListener(msg)
         if (_listenerRes.passToCommand) {
             this.checkCommand(msg)
         }
     }
-    public onCallbackQuery = (callbackQuery: telegram.CallbackQuery): void => {
-        
-    }
+    public onCallbackQuery = (callbackQuery: telegram.CallbackQuery): void => {}
     public checkInputListener = (
         msg: telegram.Message
     ): {

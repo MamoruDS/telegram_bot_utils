@@ -64,7 +64,7 @@ export const argumentCheck = async (
             } else {
                 _arg = NaN
             }
-            if (isNaN(_arg))
+            if (_arg === NaN)
                 throw new TypeError(
                     `Cannot parse given argument (args[${indexFixed}]="${args[indexFixed]}") to the type required.`
                 )
