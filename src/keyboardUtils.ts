@@ -3,7 +3,7 @@ import * as utils from './utils'
 import * as cache from './cache'
 import * as telegram from './telegram'
 
-const maxLineWidth = types.maxInlineWidth
+const maxRowWidth = types.maxInlineWidth
 
 export const genInlineKeyBoard = (
     botId: string,
@@ -73,50 +73,53 @@ const genInlineKYBDBtnWithCallbackData = (
 
 export class InlineKeyboard {
     private _btnGrp: telegram.InlineKeyboardButton[][]
-    private _lineWidth: number[]
-    private _curLine: number
+    private _rowWidths: number[]
 
     constructor() {
         this._btnGrp = []
-        this._lineWidth = []
-        this._curLine = -1
+        this._rowWidths = []
         this.addLine()
     }
 
     private addLine(): void {
         this._btnGrp.push([])
-        this._curLine++
-        this._lineWidth.push(0)
+        this._rowWidths.push(0)
     }
 
     public addKeyboardButton(
         inlineKeyboardButton: telegram.InlineKeyboardButton,
-        isNewLine?: boolean,
-        isAutoAppend?: boolean
+        isFullWidthBtn: boolean,
+        autoAppend: boolean
     ): void {
-        if (isNewLine) {
-            if (this._lineWidth[this._curLine] !== 0) this.addLine()
-            this._btnGrp[this._curLine].push(inlineKeyboardButton)
-            this._lineWidth[this._curLine] = Infinity
+        if (isFullWidthBtn) {
+            if (this._rowWidths.slice(-1)[0] !== 0) {
+                this.addLine()
+            }
+            const curLine = this._rowWidths.length - 1
+            this._btnGrp[curLine].push(inlineKeyboardButton)
+            this._rowWidths[curLine] = Infinity
             return
         }
-        const lineCheck = this._lineWidth
-            .map((v, i) => {
-                if (v + inlineKeyboardButton.text.length > maxLineWidth)
-                    return -1
-                else return i
-            })
-            .filter(v => v != -1)
-        if (lineCheck.length === 0) {
-            this.addLine()
-            return this.addKeyboardButton(inlineKeyboardButton, isAutoAppend)
+        const textLength = inlineKeyboardButton.text.length
+        if (autoAppend) {
+            const _validRows = this._rowWidths
+                .map((v, i) => {
+                    if (v + textLength > maxRowWidth) {
+                        return -1
+                    } else return i
+                })
+                .filter(v => v != -1)
+            if (_validRows.length !== 0) {
+                const curLine = _validRows[0]
+                this._btnGrp[curLine].push(inlineKeyboardButton)
+                this._rowWidths[curLine] += textLength
+                return
+            }
         }
-        let inertLine = this._curLine
-        if (lineCheck[0] !== this._curLine && isAutoAppend) {
-            inertLine = lineCheck[0]
-        }
-        this._btnGrp[inertLine].push(inlineKeyboardButton)
-        this._lineWidth[inertLine] += inlineKeyboardButton.text.length
+        this.addLine()
+        const curLine = this._rowWidths.length - 1
+        this._btnGrp[curLine].push(inlineKeyboardButton)
+        this._rowWidths[curLine] += textLength
         return
     }
 
