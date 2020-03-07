@@ -37,6 +37,32 @@ export type dataLinkLess = {
     user_id?: number | LinkFree
 }
 
+export interface Action {
+    name: string
+    action_exec: (
+        callbackData: any,
+        data: { get: () => object; set: (data: object) => any }
+    ) => void
+    application_name: string
+    link_chat_free: boolean
+    link_user_free: boolean
+    group_clean: boolean
+}
+
+export interface ActionOptions {
+    application_name: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
+    group_clean: boolean
+}
+
+export interface ActionOptionsInput {
+    application_name?: string
+    link_chat_free?: boolean
+    link_user_free?: boolean
+    group_clean?: boolean
+}
+
 type CommandFilter = 'public' | 'registered' | 'owner' | 'function'
 
 export interface ArgumentCheck {
@@ -151,7 +177,7 @@ export interface Timers {
     }
 }
 
-export const maxInlineWidth = 20
+export const maxInlineWidth = 16
 
 export interface inlineKeyboardButton {
     text: string
@@ -166,11 +192,11 @@ export interface inlineKeyboardButton {
 
 export type callbackData = any | CallbackDataDefined
 
-interface CallbackDataDefined {
-    is_defined_data: true
-    application_name: string
+export interface CallbackDataDefined {
     action_name: string
+    user_id: number
     data: any
+    is_defined_data: true
 }
 
 type ArgumentRequiredError = 0
