@@ -81,6 +81,17 @@ export interface CommandOptions {
     description: string
 }
 
+export interface CommandOptionsInput {
+    application_name?: string | AppGlobal
+    argument_check?: ArgumentCheck[]
+    argument_error_function?: (msg: telegram.Message, err: Error) => any
+    link_chat_free?: boolean
+    link_user_free?: boolean
+    filter?: CommandFilter
+    filter_function?: (msg: telegram.Message) => Promise<boolean>
+    description?: string
+}
+
 export interface PasCmdMsgListener {
     chat_id: number
     user_id: number
@@ -115,6 +126,17 @@ export interface inputListenerOptions {
     application_name: string | AppGlobal
     link_chat_free: boolean
     link_user_free: boolean
+    available_count?: number | Infinity
+    pass_to_other_listener?: boolean
+    pass_to_command?: boolean
+    init_function?: listenerAutoFunc
+    final_function?: listenerAutoFunc
+}
+
+export interface inputListenerOptionsInput {
+    application_name?: string | AppGlobal
+    link_chat_free?: boolean
+    link_user_free?: boolean
     available_count?: number | Infinity
     pass_to_other_listener?: boolean
     pass_to_command?: boolean

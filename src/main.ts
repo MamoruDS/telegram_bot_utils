@@ -48,7 +48,7 @@ export class BotUtils {
             msg: telegram.Message,
             data: types.applicationDataMan
         ) => any,
-        options?: types.inputListenerOptions
+        options?: types.inputListenerOptionsInput
     ): void => {
         const _options = defaults.options_input_listener(options)
         const _listener = _.filter(this._inputListeners, {
@@ -90,7 +90,7 @@ export class BotUtils {
             msg: telegram.Message,
             data: { get: () => object; set: (data: object) => any }
         ) => any,
-        options?: types.CommandOptions
+        options?: types.CommandOptionsInput
     ) => {
         const _options = defaults.options_command(options)
         if (
@@ -250,6 +250,9 @@ export class BotUtils {
         if (_listenerRes.passToCommand) {
             this.checkCommand(msg)
         }
+    }
+    public onCallbackQuery = (callbackQuery: telegram.CallbackQuery): void => {
+        
     }
     public checkInputListener = (
         msg: telegram.Message

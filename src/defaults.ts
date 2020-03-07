@@ -1,6 +1,6 @@
 import * as _ from 'lodash'
 
-import { inputListenerOptions, CommandOptions } from './types'
+import { inputListenerOptions, inputListenerOptionsInput, CommandOptions, CommandOptionsInput } from './types'
 import * as types from './types'
 import * as telegram from './telegram'
 
@@ -56,7 +56,7 @@ const defaultInputListenerOptions = {
 } as inputListenerOptions
 
 export const options_input_listener = (
-    options?: inputListenerOptions
+    options?: inputListenerOptionsInput
 ): inputListenerOptions => {
     const _options = getOptions(
         defaultInputListenerOptions,
@@ -76,7 +76,7 @@ const defaultCommandOptions = {
     description: 'undefined',
 } as CommandOptions
 
-export const options_command = (options?: CommandOptions): CommandOptions => {
+export const options_command = (options?: CommandOptionsInput): CommandOptions => {
     const _options = getOptions(
         defaultCommandOptions,
         options
