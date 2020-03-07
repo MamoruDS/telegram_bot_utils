@@ -1,6 +1,8 @@
 import * as _ from 'lodash'
 
-import { inputListenerOptions, inputListenerOptionsInput, CommandOptions, CommandOptionsInput } from './types'
+import { inputListenerOptions, inputListenerOptionsInput } from './types'
+import { CommandOptions, CommandOptionsInput } from './types'
+import { ActionOptions, ActionOptionsInput } from './types'
 import * as types from './types'
 import * as telegram from './telegram'
 
@@ -76,10 +78,24 @@ const defaultCommandOptions = {
     description: 'undefined',
 } as CommandOptions
 
-export const options_command = (options?: CommandOptionsInput): CommandOptions => {
+export const options_command = (
+    options?: CommandOptionsInput
+): CommandOptions => {
     const _options = getOptions(
         defaultCommandOptions,
         options
     ) as CommandOptions
+    return _options
+}
+
+const defaultActionOptions = {
+    application_name: types.appGlobal,
+    link_chat_free: false,
+    link_user_free: false,
+    group_clean: false,
+} as ActionOptions
+
+export const options_action = (options?: ActionOptionsInput): ActionOptions => {
+    const _options = getOptions(defaultActionOptions, options) as ActionOptions
     return _options
 }

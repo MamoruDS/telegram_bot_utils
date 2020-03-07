@@ -15,6 +15,7 @@ export class BotUtils {
     private _applications: types.Application[]
     private _commands: types.Command[]
     private _inputListeners: types.inputListener[]
+    private _actions: types.Action[]
     // private _flushCachedCallbackData: boolean
     constructor(
         botId: string | number,
@@ -27,6 +28,7 @@ export class BotUtils {
         this._applications = [] as types.Application[]
         this._timers = {} as types.Timers
         this._inputListeners = [] as types.inputListener[]
+        this._actions = [] as types.Action[]
         this._botId = `${botId}`
         this._ownerId = ownerId
         this.addApplication('_global', 0, false)
@@ -245,6 +247,25 @@ export class BotUtils {
     public removeTimer = (id: string): void => {
         _.unset(this._timers, id)
     }
+    public addAction = (
+        actionName: string,
+        execFunc: (
+            callbackData: any,
+            data: { get: () => object; set: (data: object) => any }
+        ) => void,
+        options?: types.ActionOptionsInput
+    ) => {
+        const _options = defaults.options_action(options)
+        this._actions.push(
+            Object.assign(
+                {
+                    name: actionName,
+                    action_exec: execFunc,
+                },
+                _options
+            )
+        )
+    }
     public onMessage = (
         msg: telegram.Message,
         expireDelay: number = Infinity
@@ -256,7 +277,59 @@ export class BotUtils {
             this.checkCommand(msg)
         }
     }
-    public onCallbackQuery = (callbackQuery: telegram.CallbackQuery): void => {}
+    public onCallbackQuery = (callbackQuery: telegram.CallbackQuery): void => {
+        const id = utils.parseId(callbackQuery.data)
+        if (id.match) {
+            const cachedData = cache.getCallbackData(
+                this._botId,
+                callbackQuery.data
+            )
+            const data = JSON.parse(cachedData)['data'] as types.callbackData
+            const opts = { groupClean: false }
+            if (data.is_defined_data) {
+                const definedData = Object.assign(
+                    {},
+                    data
+                ) as types.CallbackDataDefined
+                const msg = callbackQuery.message
+                const chatId = getChatId(msg)
+                const userId = getUserId(callbackQuery)
+                if (userId === definedData.user_id) {
+                    for (const app of _.sortBy(this._applications, [
+                        'priority',
+                    ])) {
+                        if (!this.checkApplicationBind(app.name, chatId))
+                            continue
+                        // TODO: cache unbind
+                        const action = _.filter(this._actions, action => {
+                            return checkValue(
+                                app.name,
+                                action['application_name']
+                            )
+                        })[0]
+                        if (action === undefined) continue
+                        const applicationData = this.applicationDataMan(
+                            app.name,
+                            {
+                                chat_id: action.link_chat_free
+                                    ? types.linkFree
+                                    : chatId,
+                                user_id: action.link_user_free
+                                    ? types.linkFree
+                                    : userId,
+                            }
+                        )
+                        action.action_exec(definedData.data, applicationData)
+                        opts.groupClean = action.group_clean
+                    }
+                }
+            }
+            if (opts.groupClean)
+                cache.removeCallbackDataByGroup(this._botId, id.suffix)
+        } else {
+            return
+        }
+    }
     public checkInputListener = (
         msg: telegram.Message
     ): {
@@ -269,13 +342,22 @@ export class BotUtils {
         const userId = getUserId(msg)
         for (const app of _.sortBy(this._applications, ['priority'])) {
             if (!this.checkApplicationBind(app.name, chatId)) continue
+            // TODO: cache unbind
             const inputListener = _.filter(
                 this._inputListeners,
                 inputListener => {
                     return (
-                        checkValue(chatId, inputListener['chat_id'], 0) &&
-                        checkValue(userId, inputListener['user_id'], 0) &&
-                        checkValue(app.name, inputListener['application'])
+                        checkValue(
+                            chatId,
+                            inputListener['chat_id'],
+                            types.linkFree
+                        ) &&
+                        checkValue(
+                            userId,
+                            inputListener['user_id'],
+                            types.linkFree
+                        ) &&
+                        checkValue(app.name, inputListener['application_name']) // ?
                     )
                 }
             )[0]
@@ -453,7 +535,9 @@ export class BotUtils {
     }
 }
 
-export const getUserId = (msg: telegram.Message): number => {
+export const getUserId = (
+    msg: telegram.Message | telegram.CallbackQuery
+): number => {
     if (msg.from) {
         return msg.from.id
     }
