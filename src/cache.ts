@@ -23,7 +23,7 @@ if (!fs.statSync(DATA_DIR).isDirectory()) {
 const adapter = new FileSync(DATA_PATH)
 const db = low(adapter)
 
-db.defaults({ bots: {}, cache: { callback_data: {} } }).write()
+db.defaults({ bots: {} }).write()
 
 export const setCallbackData = (
     botId: string,
@@ -39,6 +39,17 @@ export const setCallbackData = (
 
 export const getCallbackData = (botId: string, id: string): string => {
     return db.get(['bots', botId, 'callback_data', id]).value()
+}
+
+export const removeCallbackDataByGroup = (botId: string, group: string) => {
+    db.update(['bots', botId, 'callback_data'], datas => {
+        for (const _id of Object.keys(datas)) {
+            if (_id.lastIndexOf(group) !== -1) {
+                datas[_id] = undefined
+            }
+        }
+        return datas
+    }).write()
 }
 
 export const setBotUserId = (botId: string, botUserId: number) => {
