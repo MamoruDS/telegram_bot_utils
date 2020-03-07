@@ -42,9 +42,11 @@ export const parseId = (id: string): IdInfo => {
     let _res = { match: false } as IdInfo
     const _regex = idRegex.exec(id)
     if (_regex === null) return _res
+    _res.match = true
     _res.ts = parseInt(_regex[4], idFormat.ts_radix)
     _res.prefix = _regex[2]
     _res.suffix = _regex[7]
+    return _res
 }
 
 export class GroupId {
