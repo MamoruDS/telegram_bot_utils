@@ -41,6 +41,7 @@ export interface Action {
     name: string
     action_exec: (
         callbackData: any,
+        triggerMessage: telegram.Message,
         data: { get: () => object; set: (data: object) => any }
     ) => void
     application_name: string
@@ -172,7 +173,7 @@ export interface inputListenerOptionsInput {
 
 export interface Timers {
     [timerId: string]: {
-        action: string
+        description: string
         start_timestamp: Timestamp
     }
 }

@@ -232,7 +232,7 @@ export class BotUtils {
     ): string => {
         const id = utils.genId('T')
         this._timers[id] = {
-            action: description,
+            description: description,
             start_timestamp: Date.now(),
         }
 
@@ -251,6 +251,7 @@ export class BotUtils {
         actionName: string,
         execFunc: (
             callbackData: any,
+            triggerMessage: telegram.Message,
             data: { get: () => object; set: (data: object) => any }
         ) => void,
         options?: types.ActionOptionsInput
@@ -319,7 +320,7 @@ export class BotUtils {
                                     : userId,
                             }
                         )
-                        action.action_exec(definedData.data, applicationData)
+                        action.action_exec(definedData.data, msg, applicationData)
                         opts.groupClean = action.group_clean
                     }
                 }
