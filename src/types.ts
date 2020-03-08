@@ -42,7 +42,7 @@ export interface Action {
     action_exec: (
         callbackData: any,
         triggerMessage: telegram.Message,
-        data: { get: () => object; set: (data: object) => any }
+        data: applicationDataMan
     ) => void
     application_name: string
     link_chat_free: boolean
@@ -78,7 +78,7 @@ export interface Command {
     command_function: (
         args: string[],
         msg: telegram.Message,
-        data: { get: () => object; set: (data: object) => any }
+        data: applicationDataMan
     ) => any
     application_name?: string | AppGlobal
     argument_check: ArgumentCheck[]

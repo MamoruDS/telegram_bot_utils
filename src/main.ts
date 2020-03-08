@@ -173,7 +173,8 @@ export class BotUtils {
     }
     public getApplicationUserData = (
         applicationName: string = '_global',
-        link: types.dataLinkLess = {}
+        link: types.dataLinkLess = {},
+        acceptEmpty?: boolean
     ): object | null => {
         const chatId = _.isUndefined(link.chat_id)
             ? types.linkFree
@@ -192,7 +193,11 @@ export class BotUtils {
         if (_data.length !== 0) {
             return _data[0]['data']
         } else {
-            return null
+            if (acceptEmpty) {
+                return {}
+            } else {
+                return null
+            }
         }
     }
     public setApplicationBind = (
@@ -303,9 +308,15 @@ export class BotUtils {
                             continue
                         // TODO: cache unbind
                         const action = _.filter(this._actions, action => {
-                            return checkValue(
-                                app.name,
-                                action['application_name']
+                            return (
+                                checkValue(
+                                    app.name,
+                                    action['application_name']
+                                ) &&
+                                checkValue(
+                                    definedData.action_name,
+                                    action['name']
+                                )
                             )
                         })[0]
                         if (action === undefined) continue
@@ -320,7 +331,11 @@ export class BotUtils {
                                     : userId,
                             }
                         )
-                        action.action_exec(definedData.data, msg, applicationData)
+                        action.action_exec(
+                            definedData.data,
+                            msg,
+                            applicationData
+                        )
                         opts.groupClean = action.group_clean
                     }
                 }
@@ -511,7 +526,11 @@ export class BotUtils {
         const that = this
         return {
             get(path?: string[]) {
-                const _data = that.getApplicationUserData(applicationName, link)
+                const _data = that.getApplicationUserData(
+                    applicationName,
+                    link,
+                    true
+                )
                 if (Array.isArray(path) && path.length !== 0) {
                     return _.get(_data, path)
                 } else {
@@ -521,7 +540,11 @@ export class BotUtils {
             set(value, path?: string[]) {
                 let _data = value
                 if (Array.isArray(path) && path.length !== 0) {
-                    _data = that.getApplicationUserData(applicationName, link)
+                    _data = that.getApplicationUserData(
+                        applicationName,
+                        link,
+                        true
+                    )
                     if (_data === null) _data = {}
                     _data = _.set(_data, path, value)
                 }
