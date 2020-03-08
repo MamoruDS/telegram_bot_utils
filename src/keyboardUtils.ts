@@ -17,7 +17,9 @@ export const genInlineKeyBoard = (
             keyBoard.addKeyboardButton(
                 genInlineKYBDBtnWithUrl(btn.text, btn.url, btn.url_redir),
                 btn.keyboard_row_full_width,
-                btn.keyboard_row_auto_append
+                btn.keyboard_row_auto_append,
+                btn.keyboard_row_force_append,
+                btn.keyboard_row_force_append_row_num
             )
             continue
         }
@@ -30,7 +32,9 @@ export const genInlineKeyBoard = (
                     group
                 ),
                 btn.keyboard_row_full_width,
-                btn.keyboard_row_auto_append
+                btn.keyboard_row_auto_append,
+                btn.keyboard_row_force_append,
+                btn.keyboard_row_force_append_row_num
             )
             continue
         }
@@ -89,7 +93,9 @@ export class InlineKeyboard {
     public addKeyboardButton(
         inlineKeyboardButton: telegram.InlineKeyboardButton,
         isFullWidthBtn: boolean,
-        autoAppend: boolean
+        autoAppend: boolean,
+        forceAppend: boolean,
+        forceAppendRowNum?: number
     ): void {
         if (isFullWidthBtn) {
             if (this._rowWidths.slice(-1)[0] !== 0) {
@@ -116,8 +122,11 @@ export class InlineKeyboard {
                 return
             }
         }
-        this.addLine()
-        const curLine = this._rowWidths.length - 1
+        if (!forceAppend) this.addLine()
+        const curLine =
+            forceAppend && !isNaN(forceAppendRowNum)
+                ? forceAppendRowNum
+                : this._rowWidths.length - 1
         this._btnGrp[curLine].push(inlineKeyboardButton)
         this._rowWidths[curLine] += textLength
         return

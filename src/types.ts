@@ -188,6 +188,8 @@ export interface inlineKeyboardButton {
     switch_inline_query_current_chat?: string
     keyboard_row_full_width?: boolean
     keyboard_row_auto_append?: boolean
+    keyboard_row_force_append?: boolean
+    keyboard_row_force_append_row_num?: number
 }
 
 export type callbackData = any | CallbackDataDefined
