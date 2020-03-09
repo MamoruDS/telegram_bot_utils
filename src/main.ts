@@ -272,13 +272,13 @@ export class BotUtils {
             )
         )
     }
-    public onMessage = (
+    public onMessage = async (
         msg: telegram.Message,
         expireDelay: number = Infinity
-    ): void => {
+    ): Promise<void> => {
         const _delay = Math.floor(Date.now() / 1000) - msg.date
         if (_delay > expireDelay) return
-        const _listenerRes = this.checkInputListener(msg)
+        const _listenerRes = await this.checkInputListener(msg)
         if (_listenerRes.passToCommand) {
             this.checkCommand(msg)
         }
@@ -346,11 +346,11 @@ export class BotUtils {
             return
         }
     }
-    public checkInputListener = (
+    public checkInputListener = async (
         msg: telegram.Message
-    ): {
+    ): Promise<{
         passToCommand: boolean
-    } => {
+    }> => {
         let _res = {
             passToCommand: true,
         }
@@ -384,7 +384,7 @@ export class BotUtils {
                 chat_id: inputListener.link_chat_free ? types.linkFree : chatId,
                 user_id: inputListener.link_user_free ? types.linkFree : userId,
             })
-            const res = inputListener.listener(msg, applicationData)
+            const res = await inputListener.listener(msg, applicationData)
             let removeListener: boolean = false
             if (res) {
                 removeListener = true

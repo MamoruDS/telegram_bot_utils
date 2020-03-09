@@ -138,7 +138,7 @@ export interface inputListener {
     id: string
     chat_id: number
     user_id: number
-    listener: (msg: telegram.Message, data: applicationDataMan) => boolean
+    listener: (msg: telegram.Message, data: applicationDataMan) => Promise<boolean>
     application_name: string | AppGlobal
     link_chat_free: boolean
     link_user_free: boolean
