@@ -183,7 +183,7 @@ export interface Timers {
 
 export interface Task {
     name: string
-    repeat: Infinity
+    repeat: number | Infinity
     interval: number
     action: (
         taskRecord: TaskRecord,
@@ -217,7 +217,7 @@ export interface TaskRecord {
     remains: number | Infinity
 }
 
-export interface taskOptions {
+export interface TaskOptions {
     application_name: string | AppGlobal
     link_chat_free: boolean
     link_user_free: boolean
@@ -229,7 +229,7 @@ export interface taskOptions {
     ) => void
 }
 
-export interface taskOptionsInput {
+export interface TaskOptionsInput {
     application_name?: string | AppGlobal
     link_chat_free?: boolean
     link_user_free?: boolean

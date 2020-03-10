@@ -2,6 +2,7 @@ import * as _ from 'lodash'
 
 import { inputListenerOptions, inputListenerOptionsInput } from './types'
 import { CommandOptions, CommandOptionsInput } from './types'
+import { TaskOptions, TaskOptionsInput } from './types'
 import { ActionOptions, ActionOptionsInput } from './types'
 import * as types from './types'
 import * as telegram from './telegram'
@@ -85,6 +86,19 @@ export const options_command = (
         defaultCommandOptions,
         options
     ) as CommandOptions
+    return _options
+}
+
+const defaultTaskOptions = {
+    application_name: types.appGlobal,
+    link_chat_free: false,
+    link_user_free: false,
+    timeout: 300,
+    timeout_function: () => {},
+} as TaskOptions
+
+export const options_task = (options?: TaskOptionsInput): TaskOptions => {
+    const _options = getOptions(defaultTaskOptions, options) as TaskOptions
     return _options
 }
 
