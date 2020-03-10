@@ -7,7 +7,7 @@ export const appGlobal = '_global'
 type AppGlobal = '_global'
 
 export type Infinity = number
-type Timestamp = number
+type timestamp = number
 
 export interface Application {
     name: string
@@ -138,7 +138,10 @@ export interface inputListener {
     id: string
     chat_id: number
     user_id: number
-    listener: (msg: telegram.Message, data: applicationDataMan) => Promise<boolean>
+    listener: (
+        msg: telegram.Message,
+        data: applicationDataMan
+    ) => Promise<boolean>
     application_name: string | AppGlobal
     link_chat_free: boolean
     link_user_free: boolean
@@ -174,8 +177,68 @@ export interface inputListenerOptionsInput {
 export interface Timers {
     [timerId: string]: {
         description: string
-        start_timestamp: Timestamp
+        start_timestamp: timestamp
     }
+}
+
+export interface Task {
+    name: string
+    repeat: Infinity
+    interval: number
+    action: (
+        taskRecord: TaskRecord,
+        taskOperation: TaskOperation,
+        userData: applicationDataMan
+    ) => void
+    // allow_duplicate: boolean
+    // description: string
+    application_name: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
+    timeout: number
+    timeout_function: (
+        taskRecord: TaskRecord,
+        taskOperation: TaskOperation,
+        userData: applicationDataMan
+    ) => void
+}
+
+export interface TaskOperation {
+    stop: () => void
+}
+
+export interface TaskRecord {
+    id: string
+    task_name: string
+    chat_id: number
+    user_id: number
+    start_timestamp: timestamp
+    next_timestamp: timestamp
+    remains: number | Infinity
+}
+
+export interface taskOptions {
+    application_name: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
+    timeout: number
+    timeout_function: (
+        taskRecord: TaskRecord,
+        taskOperation: TaskOperation,
+        userData: applicationDataMan
+    ) => void
+}
+
+export interface taskOptionsInput {
+    application_name?: string | AppGlobal
+    link_chat_free?: boolean
+    link_user_free?: boolean
+    timeout?: number
+    timeout_function?: (
+        taskRecord: TaskRecord,
+        taskOperation: TaskOperation,
+        userData: applicationDataMan
+    ) => void
 }
 
 export const maxInlineWidth = 16
@@ -222,7 +285,7 @@ export class ArgumentTypeError extends Error {
     public errCode: number
     constructor(errCode, msg) {
         super(msg)
-        // this.name = 'wtfError'
+        // this.name = 'Error'
         this.errCode = errCode
     }
 }
