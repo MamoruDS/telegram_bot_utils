@@ -52,6 +52,41 @@ export const removeCallbackDataByGroup = (botId: string, group: string) => {
     }).write()
 }
 
+export const getTaskRecords = (botId: string): types.TaskRecord[] => {
+    const recs = []
+    const _cachedRecs = db.get(['bots', botId, 'taskRecords']).value()
+    if (!_cachedRecs) {
+        db.set(['bots', botId, 'taskRecords'], {}).write()
+    } else {
+        _.mapKeys(db.get(['bots', botId, 'taskRecords']).value(), (v, k) => {
+            recs.push(Object.assign({ id: k }, v))
+        })
+    }
+    return recs
+}
+
+export const getTaskRecord = (
+    botId: string,
+    recId: string
+): types.TaskRecord | null => {
+    const rec = db.get(['bots', botId, 'taskRecords', recId]).value()
+    if (rec) {
+        return Object.assign({ id: recId }, rec)
+    } else {
+        return null
+    }
+}
+
+export const setTaskRecord = (
+    botId: string,
+    taskRecord: types.TaskRecord
+): void => {
+    const id = taskRecord.id
+    delete taskRecord.id
+    db.get(['bots', botId, 'taskRecords', id], taskRecord).write()
+    return
+}
+
 export const setBotUserId = (botId: string, botUserId: number) => {
     db.get(['bots', botId])
         .assign({ user_id: botUserId })
