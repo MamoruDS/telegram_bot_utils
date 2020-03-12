@@ -94,6 +94,7 @@ const defaultTaskOptions = {
     application_name: types.appGlobal,
     link_chat_free: false,
     link_user_free: false,
+    import_policy: 'next-ignore',
     timeout: 300,
     timeout_action: async () => {},
 } as TaskOptions

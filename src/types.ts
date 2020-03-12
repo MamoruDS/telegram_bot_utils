@@ -224,7 +224,7 @@ export interface Task {
 
 export interface TaskRecord {
     id: string
-    vk: string
+    vk?: string
     task_name: string
     chat_id: number
     user_id: number

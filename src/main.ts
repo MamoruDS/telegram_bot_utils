@@ -296,7 +296,8 @@ export class BotUtils {
     }
     private onTaskTimeout = async (
         record: types.TaskRecord,
-        task: types.Task
+        task: types.Task,
+        imported?: boolean
     ) => {
         const applicationData = this.applicationDataMan(task.application_name, {
             chat_id: task.link_chat_free ? types.linkFree : record.chat_id,
@@ -304,7 +305,7 @@ export class BotUtils {
         })
         const taskRecordMan = this._task.taskRecordMan(record.id)
         await task.timeout_action(record, taskRecordMan, applicationData)
-        this._task.execTaskByRecordId(record.id)
+        this._task.checkRecordById(record.id, undefined, imported)
     }
     private onTaskExecute = (record: types.TaskRecord, task: types.Task) => {
         const applicationData = this.applicationDataMan(task.application_name, {
