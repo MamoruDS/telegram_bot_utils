@@ -181,30 +181,29 @@ export interface Timers {
     }
 }
 
+export type TaskAction = (
+    taskRecord: TaskRecord,
+    taskRecordMan: TaskRecordMan,
+    userData: applicationDataMan
+) => void
+
+export type TaskTimeoutAction = (
+    taskRecord: TaskRecord,
+    taskRecordMan: TaskRecordMan,
+    userData: applicationDataMan
+) => Promise<boolean>
+
 export interface Task {
     name: string
-    repeat: number | Infinity
+    action: TaskAction
     interval: number
-    action: (
-        taskRecord: TaskRecord,
-        taskOperation: TaskOperation,
-        userData: applicationDataMan
-    ) => void
-    // allow_duplicate: boolean
-    // description: string
+    execution_counts: number | Infinity
+    description: string
     application_name: string | AppGlobal
     link_chat_free: boolean
     link_user_free: boolean
     timeout: number
-    timeout_function: (
-        taskRecord: TaskRecord,
-        taskOperation: TaskOperation,
-        userData: applicationDataMan
-    ) => void
-}
-
-export interface TaskOperation {
-    stop: () => void
+    timeout_action: TaskTimeoutAction
 }
 
 export interface TaskRecord {
@@ -214,31 +213,30 @@ export interface TaskRecord {
     user_id: number
     start_timestamp: timestamp
     next_timestamp: timestamp
-    remains: number | Infinity
+    executed_counts: number
+    expired?: true
 }
 
 export interface TaskOptions {
+    description: string
     application_name: string | AppGlobal
     link_chat_free: boolean
     link_user_free: boolean
     timeout: number
-    timeout_function: (
-        taskRecord: TaskRecord,
-        taskOperation: TaskOperation,
-        userData: applicationDataMan
-    ) => void
+    timeout_action: TaskTimeoutAction
 }
 
 export interface TaskOptionsInput {
+    description?: string
     application_name?: string | AppGlobal
     link_chat_free?: boolean
     link_user_free?: boolean
     timeout?: number
-    timeout_function?: (
-        taskRecord: TaskRecord,
-        taskOperation: TaskOperation,
-        userData: applicationDataMan
-    ) => void
+    timeout_action?: TaskTimeoutAction
+}
+
+export interface TaskRecordMan {
+    kill: () => void
 }
 
 export const maxInlineWidth = 16
