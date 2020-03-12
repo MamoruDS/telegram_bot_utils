@@ -193,6 +193,21 @@ export type TaskTimeoutAction = (
     userData: applicationDataMan
 ) => Promise<void>
 
+export const importPolicies = [
+    'curr-ignore',
+    'curr-restart',
+    'curr-redo',
+    'next-ignore',
+    'next-restart',
+]
+
+export type ImportPolicy =
+    | 'curr-ignore'
+    | 'curr-restart'
+    | 'curr-redo'
+    | 'next-ignore'
+    | 'next-restart'
+
 export interface Task {
     name: string
     action: TaskAction
@@ -202,18 +217,21 @@ export interface Task {
     application_name: string | AppGlobal
     link_chat_free: boolean
     link_user_free: boolean
+    import_policy: ImportPolicy
     timeout: number
     timeout_action: TaskTimeoutAction
 }
 
 export interface TaskRecord {
     id: string
+    vk: string
     task_name: string
     chat_id: number
     user_id: number
-    start_timestamp: timestamp
-    next_timestamp: timestamp
-    executed_counts: number
+    start: timestamp
+    next: timestamp
+    executed: number
+    locked?: true
     expired?: true
 }
 
@@ -223,6 +241,7 @@ export interface TaskOptions {
     link_chat_free: boolean
     link_user_free: boolean
     timeout: number
+    import_policy: ImportPolicy
     timeout_action: TaskTimeoutAction
 }
 
@@ -232,11 +251,13 @@ export interface TaskOptionsInput {
     link_chat_free?: boolean
     link_user_free?: boolean
     timeout?: number
+    import_policy?: ImportPolicy
     timeout_action?: TaskTimeoutAction
 }
 
 export interface TaskRecordMan {
     kill: () => void
+    resetTimer: (manualTimer?: number) => void
 }
 
 export const maxInlineWidth = 16
