@@ -68,12 +68,12 @@ export const getTaskRecords = (botId: string): types.TaskRecord[] => {
 export const getTaskRecord = (
     botId: string,
     recId: string
-): types.TaskRecord | null => {
+): types.TaskRecord | undefined => {
     const rec = db.get(['bots', botId, 'taskRecords', recId]).value()
     if (rec) {
         return Object.assign({ id: recId }, rec)
     } else {
-        return null
+        return undefined
     }
 }
 
@@ -82,8 +82,12 @@ export const setTaskRecord = (
     taskRecord: types.TaskRecord
 ): void => {
     const id = taskRecord.id
-    delete taskRecord.id
-    db.get(['bots', botId, 'taskRecords', id], taskRecord).write()
+    if (!taskRecord.expired) {
+        delete taskRecord.id
+        db.set(['bots', botId, 'taskRecords', id], taskRecord).write()
+    } else {
+        db.set(['bots', botId, 'taskRecords', id], undefined).write()
+    }
     return
 }
 
