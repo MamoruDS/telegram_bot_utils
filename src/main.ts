@@ -8,6 +8,7 @@ import * as group from './group'
 import * as keyboardUtils from './keyboardUtils'
 import { cmdMatch, argumentCheck } from './command'
 import * as defaults from './defaults'
+import { BotTask } from './task'
 
 export class BotUtils {
     private _botId: string
@@ -16,6 +17,7 @@ export class BotUtils {
     private _commands: types.Command[]
     private _inputListeners: types.inputListener[]
     private _actions: types.Action[]
+    private _task: BotTask
     // private _flushCachedCallbackData: boolean
     constructor(
         botId: string | number,
@@ -27,15 +29,23 @@ export class BotUtils {
         this._commands = [] as types.Command[]
         this._applications = [] as types.Application[]
         this._timers = {} as types.Timers
+        // this._tasks = [] as types.Task[]
         this._inputListeners = [] as types.inputListener[]
         this._actions = [] as types.Action[]
         this._botId = `${botId}`
         this._ownerId = ownerId
         this.addApplication('_global', 0, false)
+
+        this._task = new BotTask(this._botId)
+        // this._task.on('timeout', (...args) => {
+        //     console.log(args)
+        // })
         // if (options && options.flushCallbackDataCache){
         //     this._flushCachedCallbackData = true
 
         // }
+        this._task.addListener('timeout', this.onTaskTimeout)
+        this._task.addListener('execute', this.onTaskExecute)
     }
     public setBotId = (userId: number) => {
         cache.setBotUserId(this._botId, userId)
@@ -90,7 +100,7 @@ export class BotUtils {
         command_function: (
             args: string[],
             msg: telegram.Message,
-            data: { get: () => object; set: (data: object) => any }
+            data: types.applicationDataMan
         ) => any,
         options?: types.CommandOptionsInput
     ) => {
@@ -144,6 +154,7 @@ export class BotUtils {
         return cmds
     }
     public addApplication = (
+        // TODO: return setter/getter for commands actions and listeners
         applicationName: string,
         priority: number,
         finalApp: boolean
@@ -252,12 +263,63 @@ export class BotUtils {
     public removeTimer = (id: string): void => {
         _.unset(this._timers, id)
     }
+    public defTask = (
+        taskName: string,
+        action: types.TaskAction,
+        interval: number,
+        execution_counts: number = Infinity,
+        options?: types.TaskOptionsInput
+    ) => {
+        const _options = defaults.options_task(options)
+        this._task.addTask(
+            Object.assign(
+                {
+                    name: taskName,
+                    action: action,
+                    interval: interval,
+                    execution_counts: execution_counts,
+                },
+                _options
+            )
+        )
+    }
+    public startTask = (
+        taskName: string,
+        chatId: number,
+        userId: number,
+        execImmediately?: boolean
+    ): string => {
+        return this._task.addRecord(taskName, chatId, userId, execImmediately)
+    }
+    public stopTask = (recordId: string): void => {
+        this._task.delRecordById(recordId)
+    }
+    private onTaskTimeout = async (
+        record: types.TaskRecord,
+        task: types.Task
+    ) => {
+        const applicationData = this.applicationDataMan(task.application_name, {
+            chat_id: task.link_chat_free ? types.linkFree : record.chat_id,
+            user_id: task.link_user_free ? types.linkFree : record.user_id,
+        })
+        const taskRecordMan = this._task.taskRecordMan(record.id)
+        await task.timeout_action(record, taskRecordMan, applicationData)
+        this._task.execTaskByRecordId(record.id)
+    }
+    private onTaskExecute = (record: types.TaskRecord, task: types.Task) => {
+        const applicationData = this.applicationDataMan(task.application_name, {
+            chat_id: task.link_chat_free ? types.linkFree : record.chat_id,
+            user_id: task.link_user_free ? types.linkFree : record.user_id,
+        })
+        const taskRecordMan = this._task.taskRecordMan(record.id)
+        task.action(record, taskRecordMan, applicationData)
+    }
     public addAction = (
         actionName: string,
         execFunc: (
             callbackData: any,
             triggerMessage: telegram.Message,
-            data: { get: () => object; set: (data: object) => any }
+            data: types.applicationDataMan
         ) => void,
         options?: types.ActionOptionsInput
     ) => {
@@ -486,6 +548,7 @@ export class BotUtils {
         toggleByBot: boolean = false,
         toggleBySelf: boolean = false
     ) => {
+        // TODO: timeout options? union with onMessage
         const that = this
         return {
             joinListener(
