@@ -90,11 +90,12 @@ export const options_command = (
 }
 
 const defaultTaskOptions = {
+    description: 'USER DEFINED TASK',
     application_name: types.appGlobal,
     link_chat_free: false,
     link_user_free: false,
     timeout: 300,
-    timeout_function: () => {},
+    timeout_action: async () => {},
 } as TaskOptions
 
 export const options_task = (options?: TaskOptionsInput): TaskOptions => {

@@ -191,7 +191,7 @@ export type TaskTimeoutAction = (
     taskRecord: TaskRecord,
     taskRecordMan: TaskRecordMan,
     userData: applicationDataMan
-) => Promise<boolean>
+) => Promise<void>
 
 export interface Task {
     name: string
