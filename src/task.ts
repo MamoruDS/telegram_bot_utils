@@ -61,6 +61,10 @@ export class BotTask extends events.EventEmitter {
         this.checkRecordById(record.id)
         return record.id
     }
+    public delRecordById = (recordId: string): void => {
+        const _rec = this.getRecord(recordId)
+        this.setRecord(Object.assign({ expired: true }, _rec))
+    }
     public delRecord = (record: TaskRecord): void => {
         const _rec = Object.assign({}, record)
         this.setRecord(Object.assign({ expired: true }, _rec))
