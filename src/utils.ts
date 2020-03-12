@@ -50,13 +50,29 @@ export const parseId = (id: string): IdInfo => {
 }
 
 export class GroupId {
-    private readonly _group: string
     private readonly _prefix?: string
+    public readonly group: string
     constructor(prefix?: string) {
-        this._group = genRandom(idFormat.group_length)
+        this.group = genRandom(idFormat.group_length)
         this._prefix = prefix
     }
     public genId(): string {
-        return genId(this._prefix, this._group)
+        return genId(this._prefix, this.group)
     }
+    public isMember(id): boolean {
+        const idInfo = parseId(id)
+        if (idInfo.match) {
+            return idInfo.suffix === this.group
+        } else {
+            return false
+        }
+    }
+}
+
+export const wait = async (timeout): Promise<void> => {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve()
+        }, timeout)
+    })
 }
