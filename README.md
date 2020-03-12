@@ -1,16 +1,21 @@
-
 # Telegram Bot Utils
+
 [![](https://img.shields.io/npm/v/telegram_bot_utils.svg?style=flat-square)](https://www.npmjs.com/package/telegram_bot_utils)
 A package helps you deploy your application easily on bot.
 
 **This document is still at very early stage.**
 **API reference still on the way 🚧**
+
 ## Example Usage
+
 ```shell
 npm i telegram_bot_utils node-telegram-bot-api
 ```
+
 Simply use with [Node.js Telegram Bot API](https://github.com/yagop/node-telegram-bot-api).
+
 ### Start your bot
+
 ```javascript
 const TelegramBot = require('node-telegram-bot-api')
 const BotUtils = require('telegram_bot_utils').BotUtils
@@ -24,8 +29,11 @@ bot.on('message', msg => {
     botUtils.onMessage(msg, 60)
 })
 ```
+
 ### Command
+
 #### Add a command
+
 ```javascript
 botUtils.addCommand(
     'echo',
@@ -44,9 +52,11 @@ botUtils.addCommand(
     }
 )
 ```
-<img src="README.assets/image-20200312223541130.png" style="zoom:50%;" />
+
+<img src="README.assets/image-20200312223541130.png" width="200" />
 
 #### Arguments check
+
 ```javascript
 botUtils.addCommand(
     'arg_test',
@@ -90,19 +100,27 @@ botUtils.addCommand(
     }
 )
 ```
-<img src="README.assets/image-20200312223541132.png" alt="image-20200312223541132" style="zoom:40%;" />
-<img src="README.assets/image-20200312223905662.png" alt="image-20200312223905662" style="zoom:40%;" />
-<img src="README.assets/image-20200312224057424.png" alt="image-20200312224057424" style="zoom:40%;" />
+
+<center class="half">
+    <img src="README.assets/image-20200312223541132.png" alt="image-20200312223541132" width="250" />
+    <img src="README.assets/image-20200312223905662.png" alt="image-20200312223905662" width="250" />
+    <img src="README.assets/image-20200312224057424.png" alt="image-20200312224057424" width="250" />
+</center>
 
 ### Application
+
 For this package, application are using for user data storage, execution priority checking and make your functions more clear. Almost everything binds with application: commands, input listeners and handle of callback querys, except tasks.
 
 For now, you need bind application with group chat ( will provide option later
+
 #### Bind app with chat
+
 ```javascript
 botUtils.setApplicationBind('aria2Helper', -1001472983723, true)
 ```
+
 #### Bind on command
+
 ```javascript
 botUtils.addCommand(
     'bind',
@@ -144,8 +162,11 @@ botUtils.addCommand(
     }
 )
 ```
+
 ### InputListener
+
 Can be useful on force input needed case ( setting to block command trigger or using apps' priority to block other input listener
+
 ```javascript
 botUtils.addCommand(
     'echo_listener',
@@ -177,10 +198,13 @@ botUtils.addCommand(
     }
 )
 ```
-<img src="README.assets/image-20200312232539496.png" alt="image-20200312232539496" style="zoom:40%;" />
+
+<img src="README.assets/image-20200312232539496.png" alt="image-20200312232539496" width="150" />
 
 ### Task
+
 Just use this as a normal timer or making some scheduled and repeat tasks.
+
 ```javascript
 botUtils.defTask(
     'msgPerMin',
@@ -213,8 +237,11 @@ botUtils.addCommand(
     }
 )
 ```
+
 ### Group Utilities
+
 A simple verify bot for your group:
+
 ```javascript
 botUtils.addApplication('groupVerify', -1, false)
 const genRandom = require('telegram_bot_utils/dist/utils').genRandom
@@ -250,7 +277,10 @@ bot.on('message', msg => {
                 final_function: (chat, user, userData) => {
                     userData.set(null)
                     bot.kickChatMember(chat.id, user.id)
-                    bot.sendMessage(chat.id, `kicked out ${user.first_name} of group`)
+                    bot.sendMessage(
+                        chat.id,
+                        `kicked out ${user.first_name} of group`
+                    )
                 },
             }
         )
@@ -262,10 +292,14 @@ bot.on('message', msg => {
 ```
 
 ## How
+
 ### Application Data
+
 ### Handle CallbackQuery
+
 ### Task Import Policy
 
 ## License
+
 MIT License
 copyright © 2020 MamoruDS

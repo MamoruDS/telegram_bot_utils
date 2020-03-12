@@ -182,6 +182,9 @@ export class BotUtils {
             user_id: userId,
         })
     }
+    public listApplications = () => {
+        return this._applications
+    }
     public getApplicationUserData = (
         applicationName: string = '_global',
         link: types.dataLinkLess = {},
@@ -214,13 +217,13 @@ export class BotUtils {
     public setApplicationBind = (
         applicationName: string,
         chatId: number,
-        unbind?: boolean
+        bind?: boolean
     ): number[] => {
         let _binds: number[] = cache.getApplicationBinds(
             this._botId,
             applicationName
         )
-        if (unbind) {
+        if (!bind) {
             _.remove(_binds, bind => {
                 return bind === chatId
             })

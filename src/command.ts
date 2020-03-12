@@ -35,7 +35,7 @@ export const argumentCheck = async (
             const _defaultValue = checker[i].default_value
             if (_defaultValue === undefined) {
                 // const err: ERR = {
-                    // error_type: BotUtilsError.ArgumentUndefined,
+                // error_type: BotUtilsError.ArgumentUndefined,
                 // }
                 // TODO: error adv
                 throw new TypeError(
@@ -50,8 +50,10 @@ export const argumentCheck = async (
                 // pass
             } else if (_type === 'integer') {
                 _arg = parseInt(Number(_arg).toString())
+                _arg = isNaN(_arg) ? undefined : _arg
             } else if (_type === 'float') {
                 _arg = parseFloat(Number(_arg).toString())
+                _arg = isNaN(_arg) ? undefined : _arg
             } else if (_type === 'boolean') {
                 _arg = _arg.toLowerCase()
                 if (_arg === 'true') {
@@ -59,12 +61,12 @@ export const argumentCheck = async (
                 } else if (_arg === 'false') {
                     _arg = false
                 } else {
-                    _arg = NaN
+                    _arg = undefined
                 }
             } else {
-                _arg = NaN
+                _arg = undefined
             }
-            if (_arg === NaN)
+            if (typeof _arg === 'undefined')
                 throw new TypeError(
                     `Cannot parse given argument (args[${indexFixed}]="${args[indexFixed]}") to the type required.`
                 )
