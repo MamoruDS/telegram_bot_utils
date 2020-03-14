@@ -13,6 +13,7 @@ export interface Application {
     name: string
     priority: number
     final_app: boolean
+    is_group_need_bind: boolean
 }
 
 export interface applicationUserData {

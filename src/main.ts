@@ -53,6 +53,59 @@ export class BotUtils {
     public getBotId = (): number => {
         return cache.getBotUserId(this._botId)
     }
+    public addApplication = (
+        // TODO: return setter/getter for commands actions and listeners
+        applicationName: string,
+        priority?: number,
+        finalApp: boolean = false,
+        isGroupNeedBind: boolean = true
+    ): void => {
+        this.getApplication(applicationName, false, true)
+        if (typeof priority === 'undefined')
+            for (const app of this._applications)
+                priority =
+                    app.priority >= priority ? app.priority + 1 : priority
+        this._applications.push({
+            name: applicationName,
+            priority: priority,
+            final_app: finalApp,
+            is_group_need_bind: isGroupNeedBind,
+        })
+        cache.initApplication(this._botId, applicationName)
+    }
+    public getApplication = (
+        name: string,
+        checkExist: boolean = false,
+        checkDuplicate: boolean = false
+    ): types.Application => {
+        const app = _.filter(this._applications, { name: name })[0]
+        if (checkExist && typeof app === 'undefined') {
+            throw new RangeError('Undefined application')
+        }
+        if (checkDuplicate && typeof app !== 'undefined') {
+            throw new RangeError('Duplicate application')
+        }
+        return app
+    }
+    public listApplications = () => {
+        return this._applications
+    }
+    public getValidApplications = (
+        msg: telegram.Message
+    ): types.Application[] => {
+        const validApps = []
+        for (const app of _.sortBy(this._applications, ['priority'])) {
+            if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
+                if (
+                    app.is_group_need_bind &&
+                    !this.checkApplicationBind(app.name, msg.chat.id)
+                )
+                    continue
+            }
+            validApps.push(app)
+        }
+        return validApps
+    }
     public addInputListener = (
         chat: telegram.Chat,
         user: telegram.User,
@@ -153,19 +206,6 @@ export class BotUtils {
         }
         return cmds
     }
-    public addApplication = (
-        // TODO: return setter/getter for commands actions and listeners
-        applicationName: string,
-        priority: number,
-        finalApp: boolean
-    ): void => {
-        this._applications.push({
-            name: applicationName,
-            priority: priority,
-            final_app: finalApp,
-        })
-        cache.initApplication(this._botId, applicationName)
-    }
     public setApplicationUserData = (
         applicationName: string = '_global',
         data: object | null,
@@ -181,9 +221,6 @@ export class BotUtils {
             chat_id: chatId,
             user_id: userId,
         })
-    }
-    public listApplications = () => {
-        return this._applications
     }
     public getApplicationUserData = (
         applicationName: string = '_global',
@@ -422,9 +459,8 @@ export class BotUtils {
         }
         const chatId = getChatId(msg)
         const userId = getUserId(msg)
-        for (const app of _.sortBy(this._applications, ['priority'])) {
-            if (!this.checkApplicationBind(app.name, chatId)) continue
-            // TODO: cache unbind
+        const apps = this.getValidApplications(msg)
+        for (const app of apps) {
             const inputListener = _.filter(
                 this._inputListeners,
                 inputListener => {
@@ -487,10 +523,10 @@ export class BotUtils {
     private checkCommand = async (msg: telegram.Message): Promise<void> => {
         const chatId = getChatId(msg)
         const userId = getUserId(msg)
+        const apps = this.getValidApplications(msg)
         const args = cmdMatch(msg.text)
         if (msg.text && args !== null) {
-            for (const app of _.sortBy(this._applications, ['priority'])) {
-                if (!this.checkApplicationBind(app.name, chatId)) continue
+            for (const app of apps) {
                 for (const cmd of _.filter(this._commands, {
                     application_name: app.name,
                 })) {
