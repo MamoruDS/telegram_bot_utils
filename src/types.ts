@@ -14,7 +14,31 @@ export interface Application {
     priority: number
     final_app: boolean
     is_group_need_bind: boolean
+    link_chat_free: boolean
+    link_user_free: boolean
 }
+
+export interface ApplicationOptions {
+    priority: number
+    final_app: boolean
+    is_group_need_bind: boolean
+    link_chat_free: boolean
+    link_user_free: boolean
+}
+
+export interface ApplicationOptionsInput {
+    priority?: number
+    final_app?: boolean
+    is_group_need_bind?: boolean
+    link_chat_free?: boolean
+    link_user_free?: boolean
+}
+
+export type getApplication = (
+    name: string,
+    checkExist?: boolean,
+    checkDuplicate?: boolean
+) => Application
 
 export interface applicationUserData {
     id: string
@@ -157,11 +181,11 @@ export interface inputListenerOptions {
     application_name: string | AppGlobal
     link_chat_free: boolean
     link_user_free: boolean
-    available_count?: number | Infinity
-    pass_to_other_listener?: boolean
-    pass_to_command?: boolean
-    init_function?: listenerAutoFunc
-    final_function?: listenerAutoFunc
+    available_count: number | Infinity
+    pass_to_other_listener: boolean
+    pass_to_command: boolean
+    init_function: listenerAutoFunc
+    final_function: listenerAutoFunc
 }
 
 export interface inputListenerOptionsInput {
