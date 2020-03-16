@@ -1,15 +1,17 @@
 # Telegram Bot Utils
 
 [![](https://img.shields.io/npm/v/telegram_bot_utils.svg?style=flat-square)](https://www.npmjs.com/package/telegram_bot_utils)
+
 A package helps you deploy your application easily on bot.
 
 **This document is still at very early stage.**
+
 **API reference still on the way 🚧**
 
 ## Example Usage
 
 ```shell
-npm i telegram_bot_utils node-telegram-bot-api
+npm i telegram_bot_utils
 ```
 
 Simply use with [Node.js Telegram Bot API](https://github.com/yagop/node-telegram-bot-api).
@@ -109,9 +111,17 @@ botUtils.addCommand(
 
 ### Application
 
-For this package, application are using for user data storage, execution priority checking and make your functions more clear. Almost everything binds with application: commands, input listeners and handle of callback querys, except tasks.
+For this package, application are using for user data storage, execution priority checking and make your functions more clear. Almost everything binds with application: commands, input listeners, tasks and handle of callback querys.
 
-For now, you need bind application with group chat ( will provide option later
+#### Add applications
+
+```javascript
+botUtils.addApplication('calculator')
+botUtils.addApplication('groupUtils', {
+    priority: -1,
+    is_group_need_bind: true,
+})
+```
 
 #### Bind app with chat
 
@@ -243,7 +253,13 @@ botUtils.addCommand(
 A simple verify bot for your group:
 
 ```javascript
-botUtils.addApplication('groupVerify', -1, false)
+botUtils.addApplication('groupVerify', {
+    priority: -1,
+    final_app: true,
+    is_group_need_bind: true,
+    link_chat_free: false,
+    link_user_free: false,
+})
 const genRandom = require('telegram_bot_utils/dist/utils').genRandom
 
 bot.on('message', msg => {

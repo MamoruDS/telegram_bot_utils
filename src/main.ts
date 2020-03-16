@@ -4,7 +4,6 @@ import * as cache from './cache'
 import * as utils from './utils'
 import * as types from './types'
 import * as telegram from './telegram'
-import * as group from './group'
 import * as keyboardUtils from './keyboardUtils'
 import { cmdMatch, argumentCheck } from './command'
 import * as defaults from './defaults'
@@ -34,7 +33,13 @@ export class BotUtils {
         this._actions = [] as types.Action[]
         this._botId = `${botId}`
         this._ownerId = ownerId
-        this.addApplication('_global', 0, false)
+        this.addApplication('_global', {
+            priority: 0,
+            final_app: false,
+            is_group_need_bind: false,
+            link_chat_free: false,
+            link_user_free: false,
+        })
 
         this._task = new BotTask(this._botId)
         // this._task.on('timeout', (...args) => {
@@ -56,21 +61,19 @@ export class BotUtils {
     public addApplication = (
         // TODO: return setter/getter for commands actions and listeners
         applicationName: string,
-        priority?: number,
-        finalApp: boolean = false,
-        isGroupNeedBind: boolean = true
+        options: types.ApplicationOptionsInput = {}
     ): void => {
         this.getApplication(applicationName, false, true)
-        if (typeof priority === 'undefined')
+        const _options = defaults.options_application(options)
+        if (_options.priority === -Infinity)
             for (const app of this._applications)
-                priority =
-                    app.priority >= priority ? app.priority + 1 : priority
-        this._applications.push({
-            name: applicationName,
-            priority: priority,
-            final_app: finalApp,
-            is_group_need_bind: isGroupNeedBind,
-        })
+                _options.priority =
+                    app.priority >= _options.priority
+                        ? app.priority + 1
+                        : _options.priority
+        this._applications.push(
+            { name: applicationName, ..._options }
+        )
         cache.initApplication(this._botId, applicationName)
     }
     public getApplication = (
@@ -115,7 +118,10 @@ export class BotUtils {
         ) => any,
         options?: types.inputListenerOptionsInput
     ): void => {
-        const _options = defaults.options_input_listener(options)
+        const _options = defaults.options_input_listener(
+            options,
+            this.getApplication
+        )
         const _listener = _.filter(this._inputListeners, {
             application_name: _options.application_name,
             chat_id: _options.link_chat_free ? types.linkFree : chat.id,
@@ -131,18 +137,11 @@ export class BotUtils {
         if (_listener.length === 0) {
             _options.init_function(chat, user, applicationData)
             this._inputListeners.push({
-                id: utils.genId('L'),
+                id: utils.genId('IL'),
                 chat_id: chat.id,
                 user_id: user.id,
                 listener: listener,
-                application_name: _options.application_name,
-                link_chat_free: _options.link_chat_free,
-                link_user_free: _options.link_user_free,
-                available_count: _options.available_count,
-                pass_to_other_listener: _options.pass_to_other_listener,
-                pass_to_command: _options.pass_to_command,
-                init_function: _options.init_function,
-                final_function: _options.final_function,
+                ..._options,
             })
         } else {
             // TODO:
@@ -157,7 +156,7 @@ export class BotUtils {
         ) => any,
         options?: types.CommandOptionsInput
     ) => {
-        const _options = defaults.options_command(options)
+        const _options = defaults.options_command(options, this.getApplication)
         if (
             _.filter(this._commands, {
                 command_string: commandStr,
@@ -167,14 +166,7 @@ export class BotUtils {
             this._commands.push({
                 command_string: commandStr,
                 command_function: command_function,
-                application_name: _options.application_name,
-                argument_check: _options.argument_check,
-                argument_error_function: _options.argument_error_function,
-                link_chat_free: _options.link_chat_free,
-                link_user_free: _options.link_user_free,
-                filter: _options.filter,
-                filter_function: _options.filter_function,
-                description: _options.description,
+                ..._options,
             })
         } else {
             // TODO:
@@ -192,7 +184,7 @@ export class BotUtils {
         })
     }
     public getCommands = (): { [appName: string]: types.CommandInfo[] } => {
-        let cmds = {} as { [appName: string]: types.CommandInfo[] }
+        const cmds = {} as { [appName: string]: types.CommandInfo[] }
         for (const c of this._commands) {
             const appName = c.application_name
             if (!_.hasIn(cmds, appName))
@@ -310,7 +302,7 @@ export class BotUtils {
         execution_counts: number = Infinity,
         options?: types.TaskOptionsInput
     ) => {
-        const _options = defaults.options_task(options)
+        const _options = defaults.options_task(options, this.getApplication)
         this._task.addTask(
             Object.assign(
                 {
@@ -454,7 +446,7 @@ export class BotUtils {
     ): Promise<{
         passToCommand: boolean
     }> => {
-        let _res = {
+        const _res = {
             passToCommand: true,
         }
         const chatId = getChatId(msg)
