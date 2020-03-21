@@ -62,33 +62,6 @@ export type dataLinkLess = {
     user_id?: number | LinkFree
 }
 
-export interface Action {
-    name: string
-    action_exec: (
-        callbackData: any,
-        triggerMessage: telegram.Message,
-        data: applicationDataMan
-    ) => void
-    application_name: string
-    link_chat_free: boolean
-    link_user_free: boolean
-    group_clean: boolean
-}
-
-export interface ActionOptions {
-    application_name: string | AppGlobal
-    link_chat_free: boolean
-    link_user_free: boolean
-    group_clean: boolean
-}
-
-export interface ActionOptionsInput {
-    application_name?: string
-    link_chat_free?: boolean
-    link_user_free?: boolean
-    group_clean?: boolean
-}
-
 type CommandFilter = 'public' | 'registered' | 'owner' | 'function'
 
 export interface ArgumentCheck {
@@ -111,7 +84,7 @@ export interface Command {
     link_chat_free: boolean
     link_user_free: boolean
     filter: CommandFilter
-    filter_function?: (msg: telegram.Message) => Promise<boolean>
+    filter_function: (msg: telegram.Message) => Promise<boolean>
     description?: string
 }
 
@@ -291,6 +264,7 @@ export interface inlineKeyboardButton {
     text: string
     url?: string
     url_redir?: boolean
+    action_name: string
     callback_data?: any
     switch_inline_query?: string
     switch_inline_query_current_chat?: string
@@ -300,13 +274,47 @@ export interface inlineKeyboardButton {
     keyboard_row_force_append_row_num?: number
 }
 
-export type callbackData = any | CallbackDataDefined
+export type definedCallbackData = [string, number, any]
 
-export interface CallbackDataDefined {
+export const callbackDataIndex = {
+    action_name: 0,
+    init_user_id: 1,
+    data: 2,
+}
+
+export interface CallbackData {
     action_name: string
-    user_id: number
+    init_user_id: number
     data: any
-    is_defined_data: true
+}
+
+export type triggerFunction = () => Promise<boolean>
+export type triggerFilter = 'public' | 'init' | 'function'
+
+export interface CallbackQueryAction {
+    name: string
+    action: () => void
+    application_name: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
+    trigger_filter: 'public' | 'init' | 'function'
+    trigger_function: triggerFunction
+}
+
+export interface CallbackQueryActionOptions {
+    application_name: string | AppGlobal
+    link_chat_free: boolean
+    link_user_free: boolean
+    trigger_filter: triggerFilter
+    trigger_function: triggerFunction
+}
+
+export interface CallbackQueryActionOptionsInput {
+    application_name?: string | AppGlobal
+    link_chat_free?: boolean
+    link_user_free?: boolean
+    trigger_filter?: triggerFilter
+    trigger_function?: triggerFunction
 }
 
 type ArgumentRequiredError = 0
