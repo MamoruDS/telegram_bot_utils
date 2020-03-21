@@ -7,11 +7,12 @@ const maxRowWidth = types.maxInlineWidth
 
 export const genInlineKeyBoard = (
     botId: string,
+    initUserId: number,
     buttons: types.inlineKeyboardButton[]
 ): telegram.InlineKeyboardButton[][] => {
     if (buttons.length === 0) return undefined
     const keyBoard = new InlineKeyboard()
-    const group = new utils.GroupId('C')
+    const group = new utils.GroupId('CD')
     for (const btn of buttons) {
         if (btn.url) {
             keyBoard.addKeyboardButton(
@@ -27,7 +28,11 @@ export const genInlineKeyBoard = (
             keyBoard.addKeyboardButton(
                 genInlineKYBDBtnWithCallbackData(
                     btn.text,
-                    btn.callback_data,
+                    {
+                        action_name: btn.action_name,
+                        init_user_id: initUserId,
+                        data: btn.callback_data,
+                    },
                     botId,
                     group
                 ),
@@ -62,17 +67,51 @@ const genInlineKYBDBtnWithUrl = (
 
 const genInlineKYBDBtnWithCallbackData = (
     text: string,
-    callback_data: any,
+    callbackData: types.CallbackData,
     botId: string,
     group: utils.GroupId
 ): telegram.InlineKeyboardButton => {
-    const id = group.genId()
-    cache.setCallbackData(botId, id, JSON.stringify({ data: callback_data }))
+    const id = setCachedCallbackData(botId, group, callbackData)
     const keyButton: telegram.InlineKeyboardButton = {
         text: text,
         callback_data: id,
     }
     return keyButton
+}
+
+export const setCachedCallbackData = (
+    botId: string,
+    groupId: utils.GroupId,
+    callbackData: types.CallbackData
+): string => {
+    const definedData = ['', 0, undefined] as types.definedCallbackData
+    const keys = types.callbackDataIndex
+    for (const key of Object.keys(keys)) {
+        definedData[keys[key]] = callbackData[key]
+    }
+    const id = groupId.genId()
+    cache.setCallbackData(botId, id, JSON.stringify(definedData))
+    return id
+}
+
+export const getCachedCallbackData = (
+    botId: string,
+    dataId: string
+): { idInfo: utils.IdInfo; data: types.CallbackData } => {
+    const res = {} as { idInfo: utils.IdInfo; data: types.CallbackData }
+    res.idInfo = utils.parseId(dataId)
+    if (res.idInfo.match) {
+        try {
+            const definedData = JSON.parse(cache.getCallbackData(botId, dataId))
+            const keys = types.callbackDataIndex
+            for (const key of Object.keys(keys)) {
+                res.data[key] = definedData[keys[key]]
+            }
+        } catch (e) {
+            //
+        }
+    }
+    return res
 }
 
 export class InlineKeyboard {
