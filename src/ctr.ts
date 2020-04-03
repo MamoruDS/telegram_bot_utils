@@ -1,19 +1,48 @@
 import { EventEmitter } from 'events'
+import { genId } from './utils'
 
 type filterCallbackFn<T> = (item: T) => boolean
 
+class CTRMgr {
+    private CTRs: {
+        [key: string]: CTR<any>
+    }
+    constructor() {
+        this.CTRs = Object.assign({})
+    }
+
+    add<T>(id: string, CTR: CTR<T>): CTR<T> {
+        // add<T>(...P: any[]): CTR<T> {
+        // const id = genId('CTR')
+        // this.CTRs[id] = new
+        this.CTRs[id] = CTR
+        return CTR
+    }
+    get<T>(id: string): CTR<T> {
+        return this.CTRs[id]
+    }
+}
+
+export const ctrMgr = new CTRMgr()
+
 export class CTR<T> {
+    private readonly UID: string
     private items: T[]
     protected readonly itemType: string = 'unknown'
     protected readonly idField: string = 'name'
     protected _event: EventEmitter
 
     constructor(private itemNew: new (...P: any[]) => T) {
+        this.UID = genId('CTR')
+        ctrMgr.add<T>(this.UID, this)
         this.items = []
         this._event = new EventEmitter()
         this._event.emit('init')
     }
-    
+
+    get CTRUID(): string {
+        return this.UID
+    }
     get size(): number {
         return this.items.length
     }
@@ -29,6 +58,9 @@ export class CTR<T> {
         return this._event
     }
 
+    getCTR<C>(id: string): CTR<C> {
+        return ctrMgr.get<C>(id)
+    }
     get(
         id: string | number,
         checkExist: boolean = true,
@@ -53,15 +85,12 @@ export class CTR<T> {
     }
     add(...P: any[]): T {
         const item = new this.itemNew(...P)
-        this.get(item[this.idField], false, true)
-        this.items.push(item)
-        this._event.emit('add')
-        return item
+        return this.addItem(item)
     }
     protected addItem(item: T): T {
         this.get(item[this.idField], false, true)
         this.items.push(item)
-        this._event.emit('add')
+        this._event.emit('add', item[this.idField])
         return item
     }
     delete(id: string | number): boolean {
@@ -73,7 +102,7 @@ export class CTR<T> {
             }
             return true
         })
-        if (removed) this._event.emit('delete')
+        if (removed) this._event.emit('delete', id)
         return removed
     }
 
