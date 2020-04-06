@@ -1,197 +1,277 @@
-import * as events from 'events'
+import { EventEmitter } from 'events'
 import * as _ from 'lodash'
 
-import * as cache from './cache'
 import * as utils from './utils'
-import {
-    Task,
-    TaskRecord,
-    TaskRecordMan,
-    importPolicies,
-    ImportPolicy,
-} from './types'
+import * as types from './types'
+import { CTR } from './ctr'
+import { RecordMgr } from './record'
+import { ApplicationDataMan } from './application'
+import { botMgr } from './main'
 
-export class BotTask extends events.EventEmitter {
-    private _botId: string
-    private _tasks: Task[]
-    private _session: utils.GroupId
-    constructor(botId: string) {
-        super()
-        this._botId = botId
-        this._tasks = [] as Task[]
-        this._session = new utils.GroupId('TS')
+type TaskRecordInfo = {
+    vk?: string
+    init_chat_id: number
+    init_user_id: number
+    start: number
+    next: number
+    executed: number
+}
+
+export class TaskMgr extends CTR<Task> {
+    idField = 'name'
+    private botName: string
+    private _records: RecordMgr<TaskRecordInfo>
+    constructor(botName: string) {
+        super(Task)
+        this._records = new RecordMgr<TaskRecordInfo>(this.botName, 'BotTask')
+        this._records.event.addListener('import', recId => {
+            this.check(recId)
+        })
+        this.botName = botName
     }
-    private getRecords = (): TaskRecord[] => {
-        return cache.getTaskRecords(this._botId)
+
+    get record(): RecordMgr<TaskRecordInfo> {
+        return this._records
     }
-    private getRecord = (id: string): TaskRecord | undefined => {
-        return cache.getTaskRecord(this._botId, id)
+
+    add(
+        name: string,
+        execFn: TaskExecFn,
+        interval: number,
+        maxExecCounts: number,
+        options: TaskOptions
+    ) {
+        const _task = super.add(
+            name,
+            execFn,
+            interval,
+            maxExecCounts,
+            options,
+            this.botName
+        )
+        this._records.import(name)
+        return _task
     }
-    private setRecord = (record: TaskRecord): void => {
-        const _rec = Object.assign({}, record)
-        return cache.setTaskRecord(this._botId, _rec)
-    }
-    public addTask = (task: Task): void => {
-        const _task = Object.assign({}, task)
-        _task.interval *= 1000
-        _task.timeout *= 1000
-        if (_.filter(this._tasks, { name: _task.name }).length === 0) {
-            this._tasks.push(_task)
-        }
-        this.checkRecordsFromPreviousSession()
-        // TODO: throw error
-    }
-    private getTask = (taskName: string): Task => {
-        return _.filter(this._tasks, { name: taskName })[0]
-    }
-    public addRecord = (
+    new(
         taskName: string,
-        chatId: number,
-        userId: number,
-        execImmediately?: boolean
-    ): string => {
-        const task = this.getTask(taskName)
-        if (!task) {
-            // TODO: throw error
-        }
-        const startTs = Date.now()
-        const nextTs = execImmediately ? startTs : task.interval + startTs
-        const record = {
-            id: this._session.genId(),
-            task_name: task.name,
-            chat_id: chatId,
-            user_id: userId,
-            start: startTs,
-            next: nextTs,
+        initChatId: number,
+        initUserId: number,
+        execImmediately: boolean = true
+    ): string {
+        //    this._records.add()
+        const task = this.get(taskName, true, false)
+        const _start = Date.now()
+        const _next = execImmediately ? _start : task.interval + _start
+        const record = this._records.add(taskName, {
+            init_chat_id: initChatId,
+            init_user_id: initUserId,
+            start: _start,
+            next: _next,
             executed: 0,
-        } as TaskRecord
-        this.setRecord(record)
-        this.nextCheck(record.id)
+        })
+        this.next(record.id)
         return record.id
     }
-    public delRecordById = (recordId: string): void => {
-        const _rec = this.getRecord(recordId)
-        this.setRecord(Object.assign({ expired: true }, _rec))
-    }
-    public delRecord = (record: TaskRecord): void => {
-        const _rec = Object.assign({}, record)
-        this.setRecord(Object.assign({ expired: true }, _rec))
-    }
-    public checkRecordsFromPreviousSession = () => {
-        const recs = this.getRecords()
-        for (const rec of recs) {
-            if (this._session.isMember(rec.id)) continue
-            this.delRecordById(rec.id)
-            rec.id = this._session.genId()
-            this.setRecord(rec)
-            this.checkRecordById(rec.id, undefined, true)
-        }
-    }
-    public setRecordTimeoutLockById = (recordId: string, lock: boolean) => {
-        const _rec = this.getRecord(recordId)
-        if (lock) {
-            _rec.locked = true
-        } else {
-            delete _rec.locked
-        }
-        this.setRecord(_rec)
-    }
-    public checkRecordById = (
-        recordId: string,
-        verifyKey: string,
-        previousRecord?: boolean
-    ): void => {
-        const _rec = this.getRecord(recordId)
-        this.checkRecord(_rec, verifyKey, previousRecord)
-    }
-    public checkRecord = (
-        record: TaskRecord | undefined,
-        verifyKey: string,
-        previousRecord?: boolean
-    ): void => {
-        if (!record) return
-        if (verifyKey !== record.vk && !previousRecord) return
-        const dTs = Date.now() - record.next
-        const task = this.getTask(record.task_name)
-        if (!task) {
+
+    check(recId: string, verifyKey?: string): void {
+        const record = this._records.get(recId, true, false)
+        if (typeof verifyKey !== 'undefined' && verifyKey !== record.info.vk)
             return
-        }
-        if (record.executed >= task.execution_counts) {
-            this.delRecord(record)
+        const dTs = Date.now() - record.info.next
+        const task = this.get(record.recordOf, true, false)
+        if (record.info.executed >= task.maxExecCounts) {
+            this._records.delete(record.id)
             return
         }
         if (dTs > task.timeout && !record.locked) {
-            this.setRecordTimeoutLockById(record.id, true)
-            this.emit('timeout', record, task, previousRecord)
+            record.locked = true
+            // this.event.emit(
+            task.event.emit(
+                'timeout',
+                record.id,
+                typeof verifyKey === 'undefined'
+            )
             return
         }
-        if (dTs > 0 && previousRecord) {
-            const policy =
-                importPolicies.indexOf(task.import_policy) !== -1
-                    ? task.import_policy
-                    : importPolicies[0]
-            switch (policy.split('-')[1]) {
+        if (dTs > 0 && typeof verifyKey === 'undefined') {
+            switch (task.importPolicy.split('-')[1]) {
                 case 'ignore':
-                    const curr = Date.now()
-                    while (record.next < curr - task.interval) {
-                        record.next += task.interval
+                    while (record.info.next < Date.now() - task.interval) {
+                        record.info.next += task.interval
                     }
                     break
                 case 'restart':
-                    record.next = Date.now()
+                    record.info.next = Date.now()
+                    break
             }
-            this.setRecord(record)
-            if (policy.split('-')[0] === 'curr') {
-                this.execTaskByRecordId(record.id)
-            } else if (policy.split('-')[0] === 'next') {
-                record.next += task.interval
-                this.setRecord(record)
-                this.nextCheck(record.id)
+            switch (task.importPolicy.split('-')[0]) {
+                case 'curr':
+                    task.exec(record.id)
+                    break
+                case 'next':
+                    record.info.next += task.interval
+                    this.next(record.id)
+                    break
             }
         } else if (dTs > 0) {
-            this.execTaskByRecordId(record.id)
+            task.exec(record.id)
         } else {
-            this.setRecordTimeoutLockById(record.id, false)
-            this.nextCheck(record.id, Math.abs(dTs))
+            record.locked = false
+            this.next(record.id, Math.abs(dTs))
         }
     }
-    public nextCheck = (recordId: string, timeout: number = 0) => {
-        const _rec = this.getRecord(recordId)
-        if (_rec) {
+    next(recId: string, timeout: number = 0): void {
+        const record = this._records.get(recId, false, false)
+        if (record) {
             const key = utils.genRandom(4)
-            _rec.vk = key
-            this.setRecord(_rec)
+            record.info.vk = key
             setTimeout(() => {
-                this.checkRecordById(_rec.id, key)
+                this.check(record.id, key)
             }, timeout)
         }
     }
-    public execTaskByRecordId = async (recordId: string): Promise<void> => {
-        const record = this.getRecord(recordId)
-        if (!record) return
-        const task = this.getTask(record.task_name)
-        record.next += task.interval
-        record.executed += 1
-        this.setRecord(record)
-        this.emit('execute', record, task)
-        await utils.wait(5)
-        this.nextCheck(record.id)
+}
+
+type ImportPolicy =
+    | 'curr-ignore'
+    | 'curr-restart'
+    | 'curr-redo'
+    | 'next-ignore'
+    | 'next-restart'
+
+type TaskExecFn = (recordInfo: TaskRecordInfo, data: ApplicationDataMan) => void
+
+type TaskTimeoutFn = (
+    recordInfo: TaskRecordInfo,
+    data: ApplicationDataMan
+) => Promise<void>
+
+type TaskOptions = {
+    description?: string
+    application_name?: string
+    link_chat_free?: boolean
+    link_user_free?: boolean
+    timeout?: number
+    import_policy?: ImportPolicy
+    timeout_function?: TaskTimeoutFn
+}
+
+const defaultTaskOptions = {
+    description: 'USER DEFINED TASK',
+    application_name: types.appGlobal,
+    link_chat_free: false,
+    link_user_free: false,
+    import_policy: 'next-ignore',
+    timeout: 300,
+    timeout_function: async () => {},
+} as Required<TaskOptions>
+
+class Task {
+    private botName: string
+    protected _event: EventEmitter
+    private _name: string
+    private _execFunction: TaskExecFn
+    private _interval: number
+    private _maxExecCounts: number
+    private _description: string
+    private _applicationName: string
+    private _linkChatFree: boolean
+    private _linkUserFree: boolean
+    private _importPolicy: ImportPolicy
+    private _timeout: number
+    private _timeoutFunction: TaskTimeoutFn
+
+    constructor(
+        name: string,
+        execFn: TaskExecFn,
+        interval: number,
+        maxExecCounts: number,
+        options: TaskOptions,
+        botName: string
+    ) {
+        this.botName = botName
+        this._event = new EventEmitter()
+        const _options = botMgr
+            .get(botName)
+            .getDefaultOptions<TaskOptions>(defaultTaskOptions, options)
+        this._name = name
+        this._execFunction = execFn
+        this._interval = interval
+        this._maxExecCounts = maxExecCounts
+        this._description = _options.description
+        this._applicationName = _options.application_name
+        this._linkChatFree = _options.link_chat_free
+        this._linkUserFree = _options.link_user_free
+        this._importPolicy = _options.import_policy
+        this._timeout = _options.timeout
+        this._timeoutFunction = _options.timeout_function
+        this.init()
     }
-    public taskRecordMan = (recordId: string): TaskRecordMan => {
-        const that = this
-        return {
-            kill() {
-                that.delRecordById(recordId)
-            },
-            resetTimer(manualTimer?: number) {
-                const _rec = that.getRecord(recordId)
-                const _task = that.getTask(_rec.task_name)
-                const _interval =
-                    typeof manualTimer === 'number'
-                        ? manualTimer
-                        : _task.interval
-                _rec.next = Date.now() + _interval
-            },
+
+    private get CTR(): TaskMgr {
+        return botMgr.get(this.botName).task
+    }
+    get event(): EventEmitter {
+        return this._event
+    }
+    get name(): string {
+        return this._name
+    }
+    get interval(): number {
+        return this.interval
+    }
+    get maxExecCounts(): number {
+        return this._maxExecCounts
+    }
+    get importPolicy(): ImportPolicy {
+        return this._importPolicy
+    }
+    get timeout(): number {
+        return this._timeout
+    }
+
+    dataMan = (chatId?: number, userId?: number): ApplicationDataMan => {
+        return botMgr
+            .get(this.botName)
+            .application.get(this._applicationName)
+            .dataMan({
+                chat_id: this._linkChatFree ? undefined : chatId,
+                user_id: this._linkUserFree ? undefined : userId,
+            })
+    }
+    init() {
+        this._event.addListener(
+            'timeout',
+            async (recId: string, imported: boolean) => {
+                const record = this.CTR.record.get(recId, true, false)
+                await this._timeoutFunction(
+                    record.info,
+                    this.dataMan(
+                        record.info.init_chat_id,
+                        record.info.init_user_id
+                    )
+                )
+                this.CTR.check(record.id)
+            }
+        )
+        this._event.addListener('execute', recId => {
+            const record = this.CTR.record.get(recId, true, false)
+            this._execFunction(
+                record.info,
+                this.dataMan(record.info.init_chat_id, record.info.init_user_id)
+            )
+        })
+    }
+    async exec(recId: string): Promise<void> {
+        const record = this.CTR.record.get(recId, false, false)
+        if (record) {
+            record.info.next += this._interval
+            record.info.executed += 1
+            // this.CTR.event.emit('execute', recId, false)
+            this._event.emit('execute', recId)
+            await utils.wait(5)
+            this.CTR.next(record.id)
         }
+        return
     }
 }
