@@ -2,66 +2,18 @@ import { GroupId } from './utils'
 import { getRecords, getRecord, setReocrd } from './cache'
 import { ctrMgr, CTR } from './ctr'
 
-// class CachedRecord<RecInfo> {
-//     private readonly _id: string
-//     private readonly _info: RecInfo
-
-//     constructor(id: string, info: string) {
-//         this._id = id
-//         try {
-//             this._info = Object.assign(JSON.parse(info))
-//         } catch (err) {
-//             if (err instanceof SyntaxError) {
-//                 this._info = Object.assign({ failed: info })
-//                 // TODO: raise error message
-//             } else {
-//                 throw err
-//             }
-//         }
-//     }
-
-//     get id(): string {
-//         return this._id
-//     }
-//     get info(): RecInfo {
-//         return this._info
-//     }
-// }
-
-// class CachedRecordMgr<RecInfo> extends CTR<CachedRecord<RecInfo>> {
-//     itemType = 'Cached Record'
-//     idField = 'id'
-//     private botName: string
-//     private recordType: string
-
-//     constructor(botName: string, recordType: string) {
-//         super(CachedRecord)
-//         this.botName = botName
-//         this.recordType = recordType
-//     }
-
-//     add(id: string, info: RecInfo): CachedRecord<RecInfo> {
-//         return
-//     }
-//     update() {
-//         this._event.emit('edit')
-//     }
-// }
-
 export class RecordMgr<RecInfo> extends CTR<Record<RecInfo>> {
     itemType = 'Record'
     idField = 'id'
     private botName: string
     private recordType: string
     private session: GroupId
-    // private cache: CachedRecordMgr<RecInfo>
 
     constructor(botName: string, recordType: string) {
         super(Record)
         this.botName = botName
         this.recordType = recordType
         this.session = new GroupId('RC')
-        // this.cache = new CachedRecordMgr(this.botName, this.recordType)
         this._event.addListener('add', this.updateCache)
         this._event.addListener('edit', this.updateCache)
         this._event.addListener('delete', this.updateCache)
@@ -76,7 +28,6 @@ export class RecordMgr<RecInfo> extends CTR<Record<RecInfo>> {
             info,
             this.CTRUID
         )
-        // this.cache.add(id, info)
         return super.addItem(rec)
     }
     import(recordOf: string) {
@@ -84,7 +35,9 @@ export class RecordMgr<RecInfo> extends CTR<Record<RecInfo>> {
         for (const _rec of _recs) {
             if (_rec.recordOf === recordOf) {
                 this.cacheDel(_rec.id)
-                this.add(recordOf, _rec.info, this.session.import(_rec.id))
+                const idRenew = this.session.import(_rec.id)
+                this.add(recordOf, _rec.info, idRenew)
+                this._event.emit('import', idRenew)
             }
             continue
         }
@@ -126,9 +79,8 @@ class Record<RecInfo> {
     private readonly _id: string
     private readonly _session: string
     private readonly _recordOf: string
-    // private _recordOf: string
-    // private CTRId: string
     protected _info: RecInfo
+    private _locked: boolean
     private readonly MGRCTRID: string
 
     constructor(
@@ -142,6 +94,7 @@ class Record<RecInfo> {
         this._session = session
         this._recordOf = recordOf
         this._info = info
+        this._locked = false
         this.MGRCTRID = mgrId
     }
 
@@ -151,12 +104,21 @@ class Record<RecInfo> {
     get id(): string {
         return this._id
     }
+    get recordOf(): string {
+        return this._recordOf
+    }
     get info(): RecInfo {
         return this._info
     }
     set info(info: RecInfo) {
         this.mgrCTR.event.emit('edit', this._id)
         this._info = info
+    }
+    get locked(): boolean {
+        return this._locked
+    }
+    set locked(lock: boolean) {
+        this._locked = lock
     }
     get STO(): RecSTO<RecInfo> {
         return {
