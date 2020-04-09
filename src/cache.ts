@@ -5,11 +5,12 @@ import * as low from 'lowdb'
 import * as FileSync from 'lowdb/adapters/FileSync'
 
 import * as utils from './utils'
-import * as types from './types'
+
+import { RecSTO } from './record'
+import { ApplicationChatBindSTO, DataSpace } from './application'
 
 const DATA_DIR = './data'
 
-// const CACHE_PATH = path.join(DATA_DIR, 'cache.json')
 const DATA_PATH = path.join(DATA_DIR, 'data.json')
 
 if (!fs.existsSync(DATA_DIR)) {
@@ -52,86 +53,104 @@ export const removeCallbackDataByGroup = (botId: string, group: string) => {
     }).write()
 }
 
-export const getTaskRecords = (botId: string): types.TaskRecord[] => {
-    const recs = []
-    const _cachedRecs = db.get(['bots', botId, 'taskRecords']).value()
-    if (!_cachedRecs) {
-        db.set(['bots', botId, 'taskRecords'], {}).write()
-    } else {
-        _.mapKeys(db.get(['bots', botId, 'taskRecords']).value(), (v, k) => {
-            recs.push(Object.assign({ id: k }, v))
-        })
-    }
-    return recs
+export function getRecords<I>(
+    botName: string,
+    recordType: string
+): RecSTO<I>[] {
+    const _recs = db.get(['bots', botName, recordType]).value()
+    return Object.keys(_recs).map(id => {
+        const _info = JSON.parse(_recs[id])
+        return {
+            id: id,
+            session: _info['session'],
+            recordOf: _info['recordOf'],
+            info: _info['info'],
+        }
+    })
 }
 
-export const getTaskRecord = (
-    botId: string,
+export function getRecord<I>(
+    botName: string,
+    recordType: string,
     recId: string
-): types.TaskRecord | undefined => {
-    const rec = db.get(['bots', botId, 'taskRecords', recId]).value()
-    if (rec) {
-        return Object.assign({ id: recId }, rec)
-    } else {
-        return undefined
-    }
+): RecSTO<I> {
+    const _info = db.get(['bots', botName, recordType, recId]).value()[0]
+    return JSON.parse({ ..._info, id: recId })
 }
 
-export const setTaskRecord = (
-    botId: string,
-    taskRecord: types.TaskRecord
-): void => {
-    const id = taskRecord.id
-    if (!taskRecord.expired) {
-        delete taskRecord.id
-        db.set(['bots', botId, 'taskRecords', id], taskRecord).write()
-    } else {
-        db.set(['bots', botId, 'taskRecords', id], undefined).write()
-    }
-    return
-}
-
-export const setBotUserId = (botId: string, botUserId: number) => {
-    db.get(['bots', botId])
-        .assign({ user_id: botUserId })
-        .write()
-}
-
-export const getBotUserId = (botId: string): number => {
-    return db.get(['bots', botId, 'user_id']).value()
+export function setReocrd<I>(
+    botName: string,
+    recordType: string,
+    recId: string,
+    rec?: RecSTO<I>
+) {
+    db.set(
+        ['bots', botName, recordType, recId],
+        typeof rec === 'undefined'
+            ? undefined
+            : JSON.stringify({
+                  session: rec.session,
+                  recordOf: rec.recordOf,
+                  info: rec.info,
+              })
+    ).write()
 }
 
 export const initApplication = (botId: string, applicationName: string) => {
-    const binds = getApplicationBinds(botId, applicationName)
-    if (binds === undefined) setApplicationBinds(botId, applicationName, [])
+    const binds = getApplicationChatBinds(botId, applicationName)
+    if (binds === undefined) setApplicationChatBinds(botId, applicationName, [])
 }
 
-export const setApplicationBinds = (
+export const setApplicationChatBinds = (
     botId: string,
     applicationName: string,
-    binds: number[]
-): number[] => {
+    binds: ApplicationChatBindSTO[]
+): void => {
     const _bindsPath = ['bots', botId, 'applications', applicationName, 'binds']
     db.set(_bindsPath, binds).write()
-    return db.get(_bindsPath).value()
+    return
 }
 
-export const getApplicationBinds = (
+export const getApplicationChatBinds = (
     botId: string,
     applicationName: string
-): number[] => {
+): ApplicationChatBindSTO[] => {
     const _bindsPath = ['bots', botId, 'applications', applicationName, 'binds']
     return db.get(_bindsPath).value()
 }
 
-export const setApplicationUserData = (
+type ApplicationDataSTO = {
+    id: string
+    chat_id: number
+    user_id: number
+    data: object
+}
+
+export const getUserData = (
+    botId: string,
+    application: string,
+    link: Required<DataSpace>
+): object => {
+    const _appPath = ['bots', botId, 'applications', application, 'userData']
+    const _res = db
+        .get(_appPath)
+        .filter({ chat_id: link.chat_id, user_id: link.user_id })
+        .value()
+    if (_res.length > 0) {
+        const _data = _res[0] as ApplicationDataSTO
+        return _data.data
+    } else {
+        return {}
+    }
+}
+
+export const setUserData = (
     botId: string,
     application: string,
     data: object | null = null,
-    link: types.dataLink
+    link: Required<DataSpace>
 ): string | 'removed' => {
     const _appPath = ['bots', botId, 'applications', application, 'userData']
-    // const _appPath = ['bots', botId, application]
     if (db.get(_appPath).value() === undefined && data !== null) {
         db.set(_appPath, []).write()
     }
@@ -155,47 +174,15 @@ export const setApplicationUserData = (
     } else {
         if (data === null) return 'removed'
         const _id = utils.genId('D')
+        const _sto: Required<ApplicationDataSTO> = {
+            id: _id,
+            chat_id: link.chat_id,
+            user_id: link.user_id,
+            data: data,
+        }
         db.get(_appPath)
-            .push({
-                id: _id,
-                chat_id: link.chat_id,
-                user_id: link.user_id,
-                data: data,
-            })
+            .push(_sto)
             .write()
         return _id
-    }
-}
-
-export const getApplicationUserData = (
-    botId: string,
-    application: string,
-    link: types.dataLink
-): types.applicationUserData[] => {
-    const _appPath = ['bots', botId, 'applications', application, 'userData']
-    return db
-        .get(_appPath)
-        .filter({ chat_id: link.chat_id, user_id: link.user_id })
-        .value()
-}
-
-export const setApplicationDataByPath = (
-    botId: string,
-    application: string,
-    value: any,
-    dataPath: [string] | [],
-    link: types.dataLink
-) => {
-    let _data = getApplicationUserData(botId, application, {
-        chat_id: link.chat_id,
-        user_id: link.user_id,
-    })
-    if (_data !== undefined) {
-        setApplicationUserData(
-            botId,
-            application,
-            _.set(_data, _.concat('data', dataPath), value),
-            { chat_id: link.chat_id, user_id: link.user_id }
-        )
     }
 }
