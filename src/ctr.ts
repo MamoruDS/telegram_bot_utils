@@ -31,35 +31,37 @@ export class CTR<
     // ItemCtor extends AnyCtor<ItemType> = AnyCtor<ItemType>
     ItemCtor extends AnyCtor<ItemType>
 > {
-    private readonly UID: string
-    private items: ItemType[]
-    private newItem: ItemCtor
-    protected readonly itemType: string = 'unknown'
-    protected readonly idField: string = 'name'
+    private readonly _UID: string
+    private _items: ItemType[]
+    private _newItem: ItemCtor
+    protected readonly _itemType: string = 'unknown'
+    protected readonly _idField: string = 'name'
     protected _event: EventEmitter
 
-    constructor(typeClass: ItemCtor) {
-        this.UID = genId('CTR')
-        this.newItem = typeClass
-        ctrMgr.add<ItemType>(this.UID, this)
-        this.items = []
+    constructor(typeClass: ItemCtor, itemType: string, idField: string) {
+        this._UID = genId('CTR')
+        this._newItem = typeClass
+        ctrMgr.add<ItemType>(this._UID, this)
+        this._items = []
+        this._itemType = itemType
+        this._idField = idField
         this._event = new EventEmitter()
         this._event.emit('init')
     }
 
     get CTRUID(): string {
-        return this.UID
+        return this._UID
     }
     get size(): number {
-        return this.items.length
+        return this._items.length
     }
     get list(): ItemType[] {
-        return this.items.map(v => {
-            return v[this.idField]
+        return this._items.map((v) => {
+            return v[this._idField]
         })
     }
     get type(): string {
-        return this.itemType
+        return this._itemType
     }
     get event(): EventEmitter {
         return this._event
@@ -73,8 +75,8 @@ export class CTR<
         checkExist: boolean = true,
         checkDuplicate: boolean = false
     ): ItemType | undefined {
-        for (const item of this.items) {
-            if (item[this.idField] === id) {
+        for (const item of this._items) {
+            if (item[this._idField] === id) {
                 if (checkDuplicate) {
                     throw new RangeError('Duplicate item')
                 } else {
@@ -84,27 +86,26 @@ export class CTR<
         }
         if (checkExist) {
             throw new RangeError(
-                `Item not exist, failed to find "${id}" in <${this.itemType}>`
+                `Item not exist, failed to find "${id}" in <${this._itemType}>`
             )
         } else {
             return undefined
         }
     }
     add(...P: ConstructorParameters<ItemCtor>): ItemType {
-        
-        const item = new this.newItem(...P)
+        const item = new this._newItem(...P)
         return this.addItem(item)
     }
     protected addItem(item: ItemType): ItemType {
-        this.get(item[this.idField], false, true)
-        this.items.push(item)
-        this._event.emit('add', item[this.idField])
+        this.get(item[this._idField], false, true)
+        this._items.push(item)
+        this._event.emit('add', item[this._idField])
         return item
     }
     delete(id: string | number): boolean {
         let removed = false
-        this.items = this.items.filter(item => {
-            if (item[this.idField] === id) {
+        this._items = this._items.filter((item) => {
+            if (item[this._idField] === id) {
                 removed = true
                 return false
             }
@@ -127,9 +128,9 @@ export class CTR<
               }
             | filterCallbackFn<ItemType>
     ): ItemType[] {
-        const _items = [...this.items]
+        const _items = [...this._items]
         if (typeof filters === 'object') {
-            return _items.filter(item => {
+            return _items.filter((item) => {
                 for (const key of Object.keys(filters)) {
                     if (item[key] !== filters[key]) return false
                 }
@@ -137,7 +138,7 @@ export class CTR<
             })
         }
         if (typeof filters === 'function') {
-            return _items.filter(item => {
+            return _items.filter((item) => {
                 return filters(item)
             })
         }
@@ -149,7 +150,7 @@ export class CTR<
             array?: ItemType[]
         ) => any
     ): any[] {
-        const _items = [...this.items]
+        const _items = [...this._items]
         return _items.map(callbackfn)
     }
 }

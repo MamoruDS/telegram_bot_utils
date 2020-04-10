@@ -1,31 +1,51 @@
 import { GroupId } from './utils'
 import { getRecords, getRecord, setReocrd } from './cache'
 import { ctrMgr, CTR } from './ctr'
+import { BotUtilCTR } from './bot'
 
-export class RecordMgr<RecInfo> extends CTR<Record<RecInfo>> {
-    itemType = 'Record'
-    idField = 'id'
-    private botName: string
-    private recordType: string
-    private session: GroupId
+export class RecordMan {
+    public readonly id: string
+    private _recordMgr: RecordMgr<any>
 
-    constructor(botName: string, recordType: string) {
-        super(Record)
-        this.botName = botName
-        this.recordType = recordType
-        this.session = new GroupId('RC')
-        this._event.addListener('add', this.updateCache)
-        this._event.addListener('edit', this.updateCache)
-        this._event.addListener('delete', this.updateCache)
+    constructor(id: string, mgr: RecordMgr<any>) {
+        this.id = id
+        this._recordMgr = mgr
     }
 
-    add(recordOf: string, info: RecInfo, id?: string): Record<RecInfo> {
-        id = id || this.session.genId()
+    delete() {
+        this._recordMgr.delete(this.id)
+    }
+}
+
+export class RecordMgr<RecInfo> extends BotUtilCTR<
+    Record<RecInfo>,
+    RecordConstructor<RecInfo>
+> {
+    private _recordType: string
+    private _session: GroupId
+
+    constructor(botName: string, recordType: string) {
+        super(Record, 'Record', 'id', botName)
+        this._recordType = recordType
+        this._session = new GroupId('RC')
+        this._event.addListener('add', (id) => {
+            this.updateCache(id)
+        })
+        this._event.addListener('edit', (id) => {
+            this.updateCache(id)
+        })
+        this._event.addListener('delete', (id) => {
+            this.updateCache(id)
+        })
+    }
+
+    add(recordOf: string, info: RecInfo, id?: string) {
+        id = id || this._session.genId()
         const rec = new Record<RecInfo>(
-            id,
-            this.session.group,
             recordOf,
             info,
+            id,
+            this._session.group,
             this.CTRUID
         )
         return super.addItem(rec)
@@ -35,36 +55,59 @@ export class RecordMgr<RecInfo> extends CTR<Record<RecInfo>> {
         for (const _rec of _recs) {
             if (_rec.recordOf === recordOf) {
                 this.cacheDel(_rec.id)
-                const idRenew = this.session.import(_rec.id)
+                const idRenew = this._session.import(_rec.id)
                 this.add(recordOf, _rec.info, idRenew)
                 this._event.emit('import', idRenew)
             }
             continue
         }
     }
-    updateCache(id: string) {
-        const rec = this.get(id, false, false)
+    updateCache(id: string): void {
+        // const rec = this.get(id, false, false)
+        let rec = undefined
+        try {
+            rec = this.get(id, false, false)
+        } catch (e) {
+            // console.error(e)
+            // TODO:
+        }
         if (typeof rec === 'undefined') {
             this.cacheDel(id)
         } else {
             this.cacheSet(id, rec.STO)
         }
     }
+    filterAdv(
+        recordOf: string,
+        filter: { [key in keyof RecInfo]?: RecInfo[key] }
+    ): Record<RecInfo>[] {
+        return this.filter((rec) => {
+            if (recordOf !== rec.recordOf) return false
+            for (const key of Object.keys(filter)) {
+                if (rec.info[key] !== filter[key]) return false
+                continue
+            }
+            return true
+        })
+    }
 
     cacheGet(): RecSTO<RecInfo>[]
     cacheGet(id: string): RecSTO<RecInfo>
     cacheGet(id?: string): RecSTO<RecInfo> | RecSTO<RecInfo>[] {
         if (typeof id === 'undefined') {
-            return getRecords(this.botName, this.recordType)
+            return getRecords(this._botName, this._recordType)
         } else {
-            return getRecord(this.botName, this.recordType, id)
+            return getRecord(this._botName, this._recordType, id)
         }
     }
     cacheSet(id: string, rec: RecSTO<RecInfo>): void {
-        setReocrd<RecInfo>(this.botName, this.recordType, id, rec)
+        setReocrd<RecInfo>(this._botName, this._recordType, id, rec)
     }
     cacheDel(id: string): void {
-        setReocrd<RecInfo>(this.botName, this.recordType, id, undefined)
+        setReocrd<RecInfo>(this._botName, this._recordType, id, undefined)
+    }
+    recordMan(id: string): RecordMan {
+        return new RecordMan(id, this)
     }
 }
 
@@ -75,31 +118,42 @@ export type RecSTO<I> = {
     info: I
 }
 
+interface RecordConstructor<RecInfo> {
+    new (
+        recordOf: string,
+        info: RecInfo,
+        id: string,
+        session: string,
+        mgrId: string
+    ): Record<RecInfo>
+}
+
 class Record<RecInfo> {
     private readonly _id: string
     private readonly _session: string
     private readonly _recordOf: string
     protected _info: RecInfo
     private _locked: boolean
-    private readonly MGRCTRID: string
+    private readonly _MGRCTRID: string
 
+    constructor(...P: ConstructorParameters<RecordConstructor<RecInfo>>)
     constructor(
-        id: string,
-        session: string,
         recordOf: string,
         info: RecInfo,
+        id: string,
+        session: string,
         mgrId: string
     ) {
-        this._id = id
-        this._session = session
         this._recordOf = recordOf
         this._info = info
+        this._id = id
+        this._session = session
+        this._MGRCTRID = mgrId
         this._locked = false
-        this.MGRCTRID = mgrId
     }
 
-    get mgrCTR() {
-        return ctrMgr.get<RecordMgr<RecInfo>>(this.MGRCTRID)
+    get mgrCTR(): CTR<Record<RecInfo>, RecordConstructor<RecInfo>> {
+        return ctrMgr.get<Record<RecInfo>>(this._MGRCTRID)
     }
     get id(): string {
         return this._id
