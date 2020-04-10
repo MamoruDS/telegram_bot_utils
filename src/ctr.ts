@@ -1,40 +1,47 @@
 import { EventEmitter } from 'events'
 import { genId } from './utils'
 
-type filterCallbackFn<T> = (item: T) => boolean
-
 class CTRMgr {
     private CTRs: {
-        [key: string]: CTR<any>
+        [key: string]: CTR<any, AnyCtor<any>>
     }
     constructor() {
         this.CTRs = Object.assign({})
     }
 
-    add<T>(id: string, CTR: CTR<T>): CTR<T> {
-        // add<T>(...P: any[]): CTR<T> {
-        // const id = genId('CTR')
-        // this.CTRs[id] = new
+    add<T>(id: string, CTR: CTR<T, AnyCtor<T>>): CTR<T, AnyCtor<T>> {
         this.CTRs[id] = CTR
         return CTR
     }
-    get<T>(id: string): CTR<T> {
+    get<T>(id: string): CTR<T, AnyCtor<any>> {
         return this.CTRs[id]
     }
 }
 
 export const ctrMgr = new CTRMgr()
 
-export class CTR<T> {
+type filterCallbackFn<T> = (item: T) => boolean
+
+export interface AnyCtor<T> {
+    new (...P: any[]): T
+}
+
+export class CTR<
+    ItemType,
+    // ItemCtor extends AnyCtor<ItemType> = AnyCtor<ItemType>
+    ItemCtor extends AnyCtor<ItemType>
+> {
     private readonly UID: string
-    private items: T[]
+    private items: ItemType[]
+    private newItem: ItemCtor
     protected readonly itemType: string = 'unknown'
     protected readonly idField: string = 'name'
     protected _event: EventEmitter
 
-    constructor(private itemNew: new (...P: any[]) => T) {
+    constructor(typeClass: ItemCtor) {
         this.UID = genId('CTR')
-        ctrMgr.add<T>(this.UID, this)
+        this.newItem = typeClass
+        ctrMgr.add<ItemType>(this.UID, this)
         this.items = []
         this._event = new EventEmitter()
         this._event.emit('init')
@@ -46,7 +53,7 @@ export class CTR<T> {
     get size(): number {
         return this.items.length
     }
-    get list(): T[] {
+    get list(): ItemType[] {
         return this.items.map(v => {
             return v[this.idField]
         })
@@ -58,14 +65,14 @@ export class CTR<T> {
         return this._event
     }
 
-    getCTR<C>(id: string): CTR<C> {
+    getCTR<C>(id: string): CTR<C, AnyCtor<C>> {
         return ctrMgr.get<C>(id)
     }
     get(
         id: string | number,
         checkExist: boolean = true,
         checkDuplicate: boolean = false
-    ): T | undefined {
+    ): ItemType | undefined {
         for (const item of this.items) {
             if (item[this.idField] === id) {
                 if (checkDuplicate) {
@@ -83,11 +90,12 @@ export class CTR<T> {
             return undefined
         }
     }
-    add(...P: any[]): T {
-        const item = new this.itemNew(...P)
+    add(...P: ConstructorParameters<ItemCtor>): ItemType {
+        
+        const item = new this.newItem(...P)
         return this.addItem(item)
     }
-    protected addItem(item: T): T {
+    protected addItem(item: ItemType): ItemType {
         this.get(item[this.idField], false, true)
         this.items.push(item)
         this._event.emit('add', item[this.idField])
@@ -106,19 +114,19 @@ export class CTR<T> {
         return removed
     }
 
-    filter(filters: filterCallbackFn<T>): T[]
+    filter(filters: filterCallbackFn<ItemType>): ItemType[]
     filter(
         filters: {
-            [key in keyof T]?: T[key]
+            [key in keyof ItemType]?: ItemType[key]
         }
-    ): T[]
+    ): ItemType[]
     filter(
         filters:
             | {
-                  [key in keyof T]?: T[key]
+                  [key in keyof ItemType]?: ItemType[key]
               }
-            | filterCallbackFn<T>
-    ): T[] {
+            | filterCallbackFn<ItemType>
+    ): ItemType[] {
         const _items = [...this.items]
         if (typeof filters === 'object') {
             return _items.filter(item => {
@@ -134,7 +142,13 @@ export class CTR<T> {
             })
         }
     }
-    map(callbackfn: (value?: T, index?: number, array?: T[]) => any): any[] {
+    map(
+        callbackfn: (
+            value?: ItemType,
+            index?: number,
+            array?: ItemType[]
+        ) => any
+    ): any[] {
         const _items = [...this.items]
         return _items.map(callbackfn)
     }
