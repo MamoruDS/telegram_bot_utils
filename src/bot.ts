@@ -1,18 +1,11 @@
-import { CTR } from './ctr'
+import { EventEmitter } from 'events'
+
+import { CTR, AnyCtor } from './ctr'
 import { Message } from './telegram'
-import { ApplicationMgr, ApplicationDataMan } from './application'
-import { CommandMgr } from './command'
-import { InputListenerMgr } from './inputListener'
-import { BotTask } from './task'
-import * as types from './types'
-import * as defaults from './defaults'
-import { GroupUtils } from './group'
 
-export class BotMgr extends CTR<BotUtils> {
-    itemType = 'Bot'
-
+export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
     constructor() {
-        super(BotUtils)
+        super(BotUtils, 'Bot', 'name')
     }
 
     add(name: string, owner?: number | string) {
@@ -31,30 +24,39 @@ type Owner = {
     language_code?: string
 }
 
-type basicInputOptions = {
-    application_name?: string
-    link_chat_free?: boolean
-    link_user_free?: boolean
+interface BotUtilsConstructor {
+    new (
+        botName: string,
+        owner?: string | number,
+        expireDelay?: number,
+        errReply?: boolean
+    ): BotUtils
 }
 
-class BotUtils {
+export class BotUtils {
     private _botName: string
     private _owner: Owner
     private _expireDelay: number
+    private _errReply: boolean
+    private _event: EventEmitter
     private _applications: ApplicationMgr
     private _commands: CommandMgr
-    private _inputListeners: InputListenerMgr
-    private _tasks: BotTask
+    private _messageActions: MessageActionMgr
+    private _tasks: TaskMgr
     private _groupUtils: GroupUtils
 
+    constructor(...P: ConstructorParameters<BotUtilsConstructor>)
     constructor(
         botName: string,
         owner?: string | number,
-        expireDelay: number = Infinity
+        expireDelay?: number,
+        errReply?: boolean
     ) {
         this._botName = botName
         this._owner = {} as Owner
-        this._expireDelay = expireDelay
+        this._expireDelay = expireDelay || Infinity
+        this._errReply = errReply || false
+        this._event = new EventEmitter()
         if (typeof owner === 'string') {
             this._owner.username = owner
         } else if (typeof owner === 'number') {
@@ -71,6 +73,15 @@ class BotUtils {
     get expireDelay(): number {
         return this._expireDelay
     }
+    get errReply(): boolean {
+        return this._errReply
+    }
+    set errReply(bool: boolean) {
+        this._errReply = bool
+    }
+    get event(): EventEmitter {
+        return this._event
+    }
     get app(): ApplicationMgr {
         return this._applications
     }
@@ -83,26 +94,27 @@ class BotUtils {
     get command(): CommandMgr {
         return this._commands
     }
-    get inputlistener(): InputListenerMgr {
-        return this.inputlistener
+    get messageAction(): MessageActionMgr {
+        return this._messageActions
     }
     get groupUtils(): GroupUtils {
         return this._groupUtils
     }
+    get task(): TaskMgr {
+        return this._tasks
+    }
 
-    init = () => {
+    init() {
         this._applications = new ApplicationMgr(this._botName)
         this._commands = new CommandMgr(this._botName)
-        this._inputListeners = new InputListenerMgr(this._botName)
-        this._tasks = new BotTask(this._botName)
-        // this._tasks.addListener('timeout', this.onTaskTimeout)
-        // this._tasks.addListener('execute', this.onTaskExecute)
+        this._messageActions = new MessageActionMgr(this._botName)
+
+        this._tasks = new TaskMgr(this._botName)
         this._groupUtils = new GroupUtils(this._botName)
     }
-    getDefaultOptions<O extends basicInputOptions>(
+    getDefaultOptions<O>(
         defaultOptions: Required<O>,
-        inputOptions: O = {} as O,
-        defaultDataSpace: boolean = true
+        inputOptions: O = {} as O
     ): Required<O> {
         const _options = { ...defaultOptions }
         if (
@@ -112,16 +124,6 @@ class BotUtils {
         ) {
             throw new TypeError('Input options expect an object to be entered')
         }
-        if (defaultDataSpace) {
-            const _app = this._applications.get(
-                inputOptions.application_name ||
-                    defaultOptions.application_name,
-                true,
-                false
-            )
-            _options.link_chat_free = _app.linkChatFree
-            _options.link_user_free = _app.linkUserFree
-        }
         for (const opt in _options) {
             _options[opt] =
                 inputOptions[opt] !== undefined
@@ -130,80 +132,60 @@ class BotUtils {
         }
         return _options
     }
-    private isMessageExpired = (msg: Message): boolean => {
-        const _delay = Math.floor(Date.now() / 1000) - msg.date
+    private isMessageExpired(message: Message): boolean {
+        const _delay = Math.floor(Date.now() / 1000) - message.date
         if (_delay > this._expireDelay) {
-            return false
-        } else {
             return true
+        } else {
+            return false
         }
     }
-    onMessage = async (msg: Message): Promise<void> => {
-        if (this.isMessageExpired(msg)) return
-        const _l = await this._inputListeners.check(msg)
-        if (_l.passToCommand) {
-            this._commands.check(msg)
+    async onMessage(message: Message): Promise<void> {
+        try {
+            if (this.isMessageExpired(message)) return
+            const _l = await this._messageActions.checkMessage(message)
+            if (_l.passToCommand) {
+                await this._commands.check(message)
+            }
+            this._groupUtils.listener(message)
+        } catch (err) {
+            this.onError(err)
         }
-        this._groupUtils.listener(msg)
     }
-    // private onTaskTimeout = async (
-    //     record: types.TaskRecord,
-    //     task: types.Task,
-    //     imported?: boolean
-    // ) => {
-    //     const applicationData = new ApplicationDataMan(
-    //         this._botName,
-    //         task.application_name,
-    //         {
-    //             chat_id: task.link_chat_free ? undefined : record.chat_id,
-    //             user_id: task.link_user_free ? undefined : record.user_id,
-    //         }
-    //     )
-    //     const taskRecordMan = this._tasks.taskRecordMan(record.id)
-    //     await task.timeout_action(record, taskRecordMan, applicationData)
-    //     this._tasks.checkRecordById(record.id, undefined, imported)
-    // }
-    // private onTaskExecute = (record: types.TaskRecord, task: types.Task) => {
-    //     const applicationData = new ApplicationDataMan(
-    //         this._botName,
-    //         task.application_name,
-    //         {
-    //             chat_id: task.link_chat_free ? undefined : record.chat_id,
-    //             user_id: task.link_user_free ? undefined : record.user_id,
-    //         }
-    //     )
-    //     const taskRecordMan = this._tasks.taskRecordMan(record.id)
-    //     task.action(record, taskRecordMan, applicationData)
-    // }
-    // public defTask = (
-    //     taskName: string,
-    //     action: types.TaskAction,
-    //     interval: number,
-    //     execution_counts: number = Infinity,
-    //     options?: types.TaskOptionsInput
-    // ) => {
-    //     const _options = defaults.options_task(options, this._applications.get)
-    //     this._tasks.addTask(
-    //         Object.assign(
-    //             {
-    //                 name: taskName,
-    //                 action: action,
-    //                 interval: interval,
-    //                 execution_counts: execution_counts,
-    //             },
-    //             _options
-    //         )
-    //     )
-    // }
-    // public startTask = (
-    //     taskName: string,
-    //     chatId: number,
-    //     userId: number,
-    //     execImmediately?: boolean
-    // ): string => {
-    //     return this._tasks.addRecord(taskName, chatId, userId, execImmediately)
-    // }
-    // public stopTask = (recordId: string): void => {
-    //     this._tasks.delRecordById(recordId)
-    // }
+    private onError(err: Error): void {
+        if (this._event.listenerCount('error') === 0) {
+            throw err
+        } else {
+            this._event.emit('error', err)
+        }
+    }
 }
+
+export class BotUtilCTR<T, C extends AnyCtor<T> = AnyCtor<T>> extends CTR<
+    T,
+    C
+> {
+    protected _botName: string
+
+    constructor(
+        newItem: C,
+        itemType: string,
+        idField: string,
+        botName: string
+    ) {
+        super(newItem, itemType, idField)
+        this._botName = botName
+    }
+
+    protected get _bot(): BotUtils {
+        return botMgr.get(this._botName)
+    }
+}
+
+import { botMgr } from './main'
+
+import { ApplicationMgr } from './application'
+import { CommandMgr } from './command'
+import { GroupUtils } from './group'
+import { TaskMgr } from './task'
+import { MessageActionMgr } from './messageAction'
