@@ -1,46 +1,58 @@
 import * as _ from 'lodash'
 
-import { CTR } from './ctr'
+import { AnyCtor } from './ctr'
+import { BotUtils, BotUtilCTR } from './bot'
 import { botMgr } from './main'
-import * as types from './types'
 import * as cache from './cache'
-import * as telegram from './telegram'
+import { Chat, Message } from './telegram'
 
-class ApplicationChatBindMgr extends CTR<ApplicationChatBind> {
-    idField = 'chatId'
-    private botName: string
-    private applicationName: string
+export type ApplicationChatBindSTO = {
+    chat_id: number
+    passive: boolean
+}
+
+class ApplicationChatBindMgr extends BotUtilCTR<ApplicationChatBind> {
+    private _applicationName: string
 
     constructor(botName: string, applicationName: string) {
-        super(ApplicationChatBind)
-        this.botName = botName
-        this.applicationName = applicationName
-        this._event.addListener('init', this.read)
-        this._event.addListener('add', this.write)
-        this._event.addListener('edit', this.write)
-        this._event.addListener('delete', this.write)
+        super(ApplicationChatBind, 'ChatBind', 'chatId', botName)
+        this._applicationName = applicationName
+        this._event.addListener('init', this._read)
+        this._event.addListener('add', this._write)
+        this._event.addListener('edit', this._write)
+        this._event.addListener('delete', this._write)
     }
 
     add(chatId: number, options: { passive: boolean } = { passive: false }) {
-        return super.add(chatId, options, this.botName, this.applicationName)
+        return super.add(chatId, options, this._botName, this._applicationName)
     }
-    private read = () => {
-        cache.getApplicationChatBinds(this.botName, this.applicationName)
+    private _read = () => {
+        const binds = cache.getApplicationChatBinds(
+            this._botName,
+            this._applicationName
+        )
+        for (const bind of binds) {
+            this.add(bind.chat_id, { passive: bind.passive })
+        }
     }
-    private write = () => {
-        const binds = this.map(bind => {
+    private _write = () => {
+        const binds = this.map((bind) => {
             return {
                 chat_id: bind.chatId,
                 passive: bind.passive,
             }
         })
-        cache.setApplicationChatBinds(this.botName, this.applicationName, binds)
+        cache.setApplicationChatBinds(
+            this._botName,
+            this._applicationName,
+            binds
+        )
     }
 }
 
 class ApplicationChatBind {
-    private botName: string
-    private applicationName: string
+    private _botName: string
+    private _applicationName: string
     // TODO: remove additional properties
     private readonly _chatId: number
     private _passive
@@ -48,18 +60,18 @@ class ApplicationChatBind {
     constructor(
         chatId: number,
         options: { passive: boolean },
-        botName,
-        applicationName
+        botName: string,
+        applicationName: string
     ) {
-        this.botName = botName
-        this.applicationName = applicationName
+        this._botName = botName
+        this._applicationName = applicationName
         this._chatId = chatId
         this._passive = options.passive
     }
 
-    private get CTR(): ApplicationChatBindMgr {
-        return botMgr.get(this.botName).application.get(this.applicationName)
-            .bind
+    private get _CTR(): ApplicationChatBindMgr {
+        return botMgr.get(this._botName).application.get(this._applicationName)
+            .chatBind
     }
     get chatId(): number {
         return this._chatId
@@ -69,131 +81,175 @@ class ApplicationChatBind {
     }
     set passive(toggle: boolean) {
         this._passive = toggle
-        this.CTR.event.emit('edit')
+        this._CTR.event.emit('edit')
     }
 }
 
+export type DataSpace = {
+    chat_id?: number
+    user_id?: number
+}
+
 export class ApplicationDataMan {
-    private id: string
-    private botName: string
-    private applicationName: string
-    private chatId?: number
-    private userId?: number
+    private _id: string
+    private _botName: string
+    private _applicationName: string
+    private _chatId: number | undefined
+    private _userId: number | undefined
 
     constructor(
         botName: string,
         applicationName: string,
-        link: types.dataLink
+        dataSpace: DataSpace
     ) {
-        this.botName = botName
-        this.applicationName = applicationName
-        this.chatId = link.chat_id
-        this.userId = link.user_id
+        this._botName = botName
+        this._applicationName = applicationName
+        this._chatId = dataSpace.chat_id
+        this._userId = dataSpace.user_id
     }
 
     get application(): Application {
-        return botMgr.get(this.botName).application.get(this.applicationName)
+        return botMgr.get(this._botName).application.get(this._applicationName)
     }
-    get link(): types.dataLink {
+    get dataSpace(): DataSpace {
         return {
-            chat_id: this.chatId,
-            user_id: this.userId,
+            chat_id: this._chatId,
+            user_id: this._userId,
         }
     }
     get data(): object {
-        return this.application.getUserData(this.link)
+        return this.application.getUserData(this.dataSpace)
     }
     set data(data: object | null) {
-        this.application.setUserData(data, this.link)
+        this.application.setUserData(data, this.dataSpace)
     }
 
     get = (path?: string[]): any => {
-        const _data = this.application.getUserData(this.link)
+        const _data = this.application.getUserData(this.dataSpace)
         return _.get(_data, path)
     }
     set = (data: object, path?: string[]): void => {
         let _data = data
         if (typeof path !== 'undefined') {
-            _data = this.application.getUserData(this.link)
+            _data = this.application.getUserData(this.dataSpace)
             _data = _.set(_data, path, data)
         }
-        this.application.setUserData(_data, this.link)
+        this.application.setUserData(_data, this.dataSpace)
     }
     delete = (): void => {
         this.set(null)
     }
 }
 
-export class ApplicationMgr extends CTR<Application> {
-    itemType = 'Application'
-    private botName: string
+type BasicOrderItem = {
+    idFieldVal: string
+}
 
+export class ApplicationMgr extends BotUtilCTR<
+    Application,
+    ApplicationConstructor
+> {
     constructor(botName: string) {
-        // super()
-        super(Application)
-        this.botName = botName
+        super(Application, 'Application', 'name', botName)
         this.add('_global', {
             priority: 0,
-            final_app: false,
+            // final_app: false,
             is_group_need_bind: false,
-            link_chat_free: false,
-            link_user_free: false,
+            data_bind_with_chat: true,
+            data_bind_with_user: true,
         })
     }
 
     get last(): Application {
         let app = { priority: -Infinity } as Application
-        this.map(_app => {
+        this.map((_app) => {
             app = app.priority <= _app.priority ? _app : app
         })
         return app
     }
 
     add(name: string, options: ApplicationOptions) {
-        return super.add(name, options)
+        return super.add(name, options, this._botName)
+    }
+    orderByPriority<O extends BasicOrderItem, CTRItemType>(
+        itemArray: O[],
+        itemCTR: AppBaseUtilCTR<CTRItemType>
+    ): O[] {
+        const that = this
+        return _.orderBy(
+            itemArray,
+            [
+                (items) => {
+                    const appInfo = itemCTR.get(items.idFieldVal)[
+                        'appInfo'
+                    ] as ApplicationInfo
+                    return that.get(appInfo.application_name).priority
+                },
+                ,
+                (items) => {
+                    const appInfo = itemCTR.get(items.idFieldVal)[
+                        'appInfo'
+                    ] as ApplicationInfo
+                    return appInfo.sub_priority
+                },
+            ],
+            ['asc', 'asc']
+        )
     }
 }
 
 interface ApplicationOptions {
     priority?: number
-    final_app?: boolean
+    // final_app?: boolean
     is_group_need_bind?: boolean
-    link_chat_free?: boolean
-    link_user_free?: boolean
+    data_bind_with_chat?: boolean
+    data_bind_with_user?: boolean
 }
 
 const defaultApplicationOptions = {
     priority: -Infinity,
-    final_app: false,
+    // final_app: false,
     is_group_need_bind: true,
-    link_chat_free: false,
-    link_user_free: false,
+    data_bind_with_chat: true,
+    data_bind_with_user: true,
 } as Required<ApplicationOptions>
 
+export interface ApplicationConstructor {
+    new (
+        name: string,
+        options: ApplicationOptions,
+        botName: string
+    ): Application
+}
+
+type ctor = ConstructorParameters<ApplicationConstructor>
+
 export class Application {
-    private readonly botName: string
+    private readonly _botName: string
     private readonly _name: string
     private _priority: number
-    private _finalApp: boolean
+    // private _finalApp: boolean
     private readonly _isGroupNeedBind: boolean
-    private readonly _linkChatFree: boolean
-    private readonly _linkUserFree: boolean
+    private readonly _dataBindWithChat: boolean
+    private readonly _dataBindWithUser: boolean
     private _binds: ApplicationChatBindMgr
 
-    constructor(name: string, options: ApplicationOptions, botName: string) {
-        this.botName = botName
+    constructor(...P: ConstructorParameters<ApplicationConstructor>) {
+        const name = P[0]
+        const options = P[1]
+        const botName = P[2]
+        this._botName = botName
         // const _options = defaults.options_application(options)
         const _options = botMgr
-            .get(this.botName)
+            .get(this._botName)
             .getDefaultOptions<ApplicationOptions>(
                 defaultApplicationOptions,
-                options,
-                false
+                options
             )
         if (_options.priority === -Infinity) {
             try {
                 _options.priority =
-                    botMgr.get(this.botName).application.last.priority + 1
+                    botMgr.get(this._botName).application.last.priority + 1
             } catch (err) {
                 //
                 _options.priority = 0
@@ -201,16 +257,16 @@ export class Application {
         }
         this._name = name
         this._priority = _options.priority
-        this._finalApp = _options.final_app
+        // this._finalApp = _options.final_app
         this._isGroupNeedBind = _options.is_group_need_bind
-        this._linkChatFree = _options.link_chat_free
-        this._linkUserFree = _options.link_user_free
-        cache.initApplication(this.botName, name)
-        this._binds = new ApplicationChatBindMgr(this.botName, this._name)
+        this._dataBindWithChat = _options.data_bind_with_chat
+        this._dataBindWithUser = _options.data_bind_with_user
+        cache.initApplication(this._botName, name)
+        this._binds = new ApplicationChatBindMgr(this._botName, this._name)
     }
 
-    private get CTR(): ApplicationMgr {
-        return botMgr.get(this.botName).application
+    private get _CTR(): ApplicationMgr {
+        return botMgr.get(this._botName).application
     }
     get name(): string {
         return this._name
@@ -220,29 +276,29 @@ export class Application {
     }
     set priority(priority: number) {
         this._priority = priority
-        this.CTR.event.emit('edit')
+        this._CTR.event.emit('edit')
     }
-    get isFinalApp(): boolean {
-        return this._finalApp
-    }
-    set isFinalApp(isFinalApp: boolean) {
-        this._finalApp = isFinalApp
-        this.CTR.event.emit('edit')
-    }
+    // get isFinalApp(): boolean {
+    //     return this._finalApp
+    // }
+    // set isFinalApp(isFinalApp: boolean) {
+    //     this._finalApp = isFinalApp
+    //     this.CTR.event.emit('edit')
+    // }
     get isGroupNeedBind(): boolean {
         return this._isGroupNeedBind
     }
-    get linkChatFree(): boolean {
-        return this._linkChatFree
+    get dataBindWithChat(): boolean {
+        return this._dataBindWithChat
     }
-    get linkUserFree(): boolean {
-        return this._linkUserFree
+    get dataBindWithUser(): boolean {
+        return this._dataBindWithUser
     }
-    get bind(): ApplicationChatBindMgr {
+    get chatBind(): ApplicationChatBindMgr {
         return this._binds
     }
 
-    isValidForChat = (chat: telegram.Chat): boolean => {
+    isValidForChat(chat: Chat): boolean {
         if (chat.type === 'channel') {
             return false
         }
@@ -257,24 +313,114 @@ export class Application {
         }
         return true
     }
-    getUserData = (link: types.dataLink = {}): object => {
-        const chatId = link.chat_id || 0
-        const userId = link.user_id || 0
-        return cache.getUserData(this.botName, this._name, {
+    getUserData(link: DataSpace = {}): object {
+        const chatId = link.chat_id || PublicData
+        const userId = link.user_id || PublicData
+        return cache.getUserData(this._botName, this._name, {
             chat_id: chatId,
             user_id: userId,
         })
     }
-    setUserData = (data: object | null, link: types.dataLink = {}) => {
-        const chatId = link.chat_id || 0
-        const userId = link.user_id || 0
-        cache.setUserData(this.botName, this._name, data, {
+    setUserData(data: object | null, link: DataSpace = {}) {
+        const chatId = link.chat_id || PublicData
+        const userId = link.user_id || PublicData
+        cache.setUserData(this._botName, this._name, data, {
             chat_id: chatId,
             user_id: userId,
         })
     }
-    dataMan = (link: types.dataLink): ApplicationDataMan => {
-        const that = this
-        return new ApplicationDataMan(this.botName, this._name, link)
+    dataMan(dataSpace: DataSpace): ApplicationDataMan {
+        return new ApplicationDataMan(this._botName, this._name, dataSpace)
+    }
+}
+
+const DefaultApplication = '_global'
+const PublicData = 0
+
+export type ApplicationInfo = {
+    application_name?: string
+    data_space?: {
+        bind_with_chat: boolean | undefined
+        bind_with_user: boolean | undefined
+    }
+    sub_priority?: number
+}
+
+const DefaultApplicationInfo: Required<ApplicationInfo> = {
+    application_name: DefaultApplication,
+    data_space: {
+        bind_with_chat: undefined,
+        bind_with_user: undefined,
+    },
+    sub_priority: 0,
+}
+
+export class AppBaseUtilCTR<
+    T,
+    C extends AnyCtor<T> = AnyCtor<T>
+> extends BotUtilCTR<T, C> {
+    // constructor(typeclass: new (...P: any[]) => T, botName: string) {
+    //     super(typeclass, botName)
+    // }
+    // add(appInfo: ApplicationInfo, ...properties: any[]) {
+    //     return super.add(...properties)
+    // }
+    // order() {}
+}
+
+export class AppBaseUtilItem {
+    protected readonly _botName: string
+    protected _applicationInfo: ApplicationInfo
+
+    constructor(appInfo: ApplicationInfo = {}, botName: string) {
+        this._botName = botName
+        this._applicationInfo = this._bot.getDefaultOptions<ApplicationInfo>(
+            DefaultApplicationInfo,
+            appInfo
+        )
+    }
+
+    protected get _bot(): BotUtils {
+        return botMgr.get(this._botName)
+    }
+    protected get _app(): Application {
+        return this._bot.application.get(this._applicationInfo.application_name)
+    }
+    get appInfo(): ApplicationInfo {
+        return this._applicationInfo
+    }
+    get isAppBaseUtilItem(): true {
+        return true
+    }
+    // TODO: is this necessary?
+
+    dataMan(spaceInfo: Required<DataSpace> | Message): ApplicationDataMan {
+        const _app = this._app
+        const _appInfo = this._applicationInfo
+        const _spaceInf = {
+            chatId: 0,
+            userId: 0,
+        }
+        if (Object.keys(spaceInfo).lastIndexOf('chat') !== -1) {
+            const msg = { ...spaceInfo } as Message
+            _spaceInf.chatId = msg.chat.id
+            _spaceInf.userId = msg.from.id
+        } else {
+            spaceInfo = { ...spaceInfo } as Required<DataSpace>
+            _spaceInf.chatId = spaceInfo.chat_id
+            _spaceInf.userId = spaceInfo.user_id
+        }
+        const _bindWithChat: boolean =
+            typeof _appInfo.data_space.bind_with_chat === 'boolean'
+                ? _appInfo.data_space.bind_with_chat
+                : _app.dataBindWithChat
+        const _bindWithUser: boolean =
+            typeof _appInfo.data_space.bind_with_user === 'boolean'
+                ? _appInfo.data_space.bind_with_user
+                : _app.dataBindWithUser
+        return _app.dataMan({
+            chat_id: _bindWithChat ? _spaceInf.chatId : undefined,
+            user_id: _bindWithUser ? _spaceInf.userId : undefined,
+        })
     }
 }
