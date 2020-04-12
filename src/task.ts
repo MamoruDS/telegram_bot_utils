@@ -2,10 +2,13 @@ import { EventEmitter } from 'events'
 import * as _ from 'lodash'
 
 import * as utils from './utils'
-import * as types from './types'
-import { CTR } from './ctr'
 import { RecordMgr } from './record'
-import { ApplicationDataMan } from './application'
+import {
+    ApplicationDataMan,
+    ApplicationInfo,
+    AppBaseUtilCTR,
+    AppBaseUtilItem,
+} from './application'
 import { botMgr } from './main'
 
 type TaskRecordInfo = {
@@ -17,17 +20,14 @@ type TaskRecordInfo = {
     executed: number
 }
 
-export class TaskMgr extends CTR<Task> {
-    idField = 'name'
-    private botName: string
+export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
     private _records: RecordMgr<TaskRecordInfo>
     constructor(botName: string) {
-        super(Task)
-        this._records = new RecordMgr<TaskRecordInfo>(this.botName, 'BotTask')
-        this._records.event.addListener('import', recId => {
+        super(Task, 'Task', 'name', botName)
+        this._records = new RecordMgr<TaskRecordInfo>(this._botName, 'BotTask')
+        this._records.event.addListener('import', (recId) => {
             this.check(recId)
         })
-        this.botName = botName
     }
 
     get record(): RecordMgr<TaskRecordInfo> {
@@ -39,7 +39,8 @@ export class TaskMgr extends CTR<Task> {
         execFn: TaskExecFn,
         interval: number,
         maxExecCounts: number,
-        options: TaskOptions
+        options: TaskOptions,
+        applicationInfo: ApplicationInfo
     ) {
         const _task = super.add(
             name,
@@ -47,7 +48,8 @@ export class TaskMgr extends CTR<Task> {
             interval,
             maxExecCounts,
             options,
-            this.botName
+            applicationInfo,
+            this._botName
         )
         this._records.import(name)
         return _task
@@ -58,7 +60,6 @@ export class TaskMgr extends CTR<Task> {
         initUserId: number,
         execImmediately: boolean = true
     ): string {
-        //    this._records.add()
         const task = this.get(taskName, true, false)
         const _start = Date.now()
         const _next = execImmediately ? _start : task.interval + _start
@@ -148,48 +149,52 @@ type TaskTimeoutFn = (
 
 type TaskOptions = {
     description?: string
-    application_name?: string
-    link_chat_free?: boolean
-    link_user_free?: boolean
     timeout?: number
     import_policy?: ImportPolicy
     timeout_function?: TaskTimeoutFn
 }
 
-const defaultTaskOptions = {
+const defaultTaskOptions: Required<TaskOptions> = {
     description: 'USER DEFINED TASK',
-    application_name: types.appGlobal,
-    link_chat_free: false,
-    link_user_free: false,
     import_policy: 'next-ignore',
     timeout: 300,
     timeout_function: async () => {},
-} as Required<TaskOptions>
+}
 
-class Task {
-    private botName: string
+interface TaskConstructor {
+    new (
+        name: string,
+        execFn: TaskExecFn,
+        interval: number,
+        maxExecCounts: number,
+        options: TaskOptions,
+        appInfo: ApplicationInfo,
+        botName: string
+    ): Task
+}
+
+class Task extends AppBaseUtilItem {
     protected _event: EventEmitter
     private _name: string
     private _execFunction: TaskExecFn
     private _interval: number
     private _maxExecCounts: number
     private _description: string
-    private _applicationName: string
-    private _linkChatFree: boolean
-    private _linkUserFree: boolean
     private _importPolicy: ImportPolicy
     private _timeout: number
     private _timeoutFunction: TaskTimeoutFn
 
+    constructor(...P: ConstructorParameters<TaskConstructor>)
     constructor(
         name: string,
         execFn: TaskExecFn,
         interval: number,
         maxExecCounts: number,
         options: TaskOptions,
+        appInfo: ApplicationInfo,
         botName: string
     ) {
-        this.botName = botName
+        super(appInfo, botName)
         this._event = new EventEmitter()
         const _options = botMgr
             .get(botName)
@@ -199,17 +204,14 @@ class Task {
         this._interval = interval
         this._maxExecCounts = maxExecCounts
         this._description = _options.description
-        this._applicationName = _options.application_name
-        this._linkChatFree = _options.link_chat_free
-        this._linkUserFree = _options.link_user_free
         this._importPolicy = _options.import_policy
         this._timeout = _options.timeout
         this._timeoutFunction = _options.timeout_function
         this.init()
     }
 
-    private get CTR(): TaskMgr {
-        return botMgr.get(this.botName).task
+    private get _CTR(): TaskMgr {
+        return botMgr.get(this._botName).task
     }
     get event(): EventEmitter {
         return this._event
@@ -218,7 +220,7 @@ class Task {
         return this._name
     }
     get interval(): number {
-        return this.interval
+        return this._interval
     }
     get maxExecCounts(): number {
         return this._maxExecCounts
@@ -230,47 +232,41 @@ class Task {
         return this._timeout
     }
 
-    dataMan = (chatId?: number, userId?: number): ApplicationDataMan => {
-        return botMgr
-            .get(this.botName)
-            .application.get(this._applicationName)
-            .dataMan({
-                chat_id: this._linkChatFree ? undefined : chatId,
-                user_id: this._linkUserFree ? undefined : userId,
-            })
-    }
     init() {
         this._event.addListener(
             'timeout',
             async (recId: string, imported: boolean) => {
-                const record = this.CTR.record.get(recId, true, false)
+                const record = this._CTR.record.get(recId, true, false)
                 await this._timeoutFunction(
                     record.info,
-                    this.dataMan(
-                        record.info.init_chat_id,
-                        record.info.init_user_id
-                    )
+                    this.dataMan({
+                        chat_id: record.info.init_chat_id,
+                        user_id: record.info.init_user_id,
+                    })
                 )
-                this.CTR.check(record.id)
+                this._CTR.check(record.id)
             }
         )
-        this._event.addListener('execute', recId => {
-            const record = this.CTR.record.get(recId, true, false)
+        this._event.addListener('execute', (recId) => {
+            const record = this._CTR.record.get(recId, true, false)
             this._execFunction(
                 record.info,
-                this.dataMan(record.info.init_chat_id, record.info.init_user_id)
+                this.dataMan({
+                    chat_id: record.info.init_chat_id,
+                    user_id: record.info.init_user_id,
+                })
             )
         })
     }
     async exec(recId: string): Promise<void> {
-        const record = this.CTR.record.get(recId, false, false)
+        const record = this._CTR.record.get(recId, false, false)
         if (record) {
             record.info.next += this._interval
             record.info.executed += 1
             // this.CTR.event.emit('execute', recId, false)
             this._event.emit('execute', recId)
             await utils.wait(5)
-            this.CTR.next(record.id)
+            this._CTR.next(record.id)
         }
         return
     }
