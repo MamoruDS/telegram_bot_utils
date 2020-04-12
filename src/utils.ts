@@ -12,7 +12,7 @@ const idFormat = {
 }
 
 const idRegex = new RegExp(
-    `((^\\w{${idFormat.prefix_length_min},${idFormat.prefix_length_max}})-|^)(\\w{1,${idFormat.phrase_1_length}})-([A-F\\d]{1,})-(\\w{1,${idFormat.phrase_1_length}})(-(\\w{${idFormat.suffix_length_min},${idFormat.suffix_length_max}})$|$)`,
+    `((^\\w{${idFormat.prefix_length_min},${idFormat.prefix_length_max}})-|^)((\\w{1,${idFormat.phrase_1_length}})-([A-F\\d]{1,})-(\\w{1,${idFormat.phrase_1_length}}))(-(\\w{${idFormat.suffix_length_min},${idFormat.suffix_length_max}})$|$)`,
     'gm'
 )
 
@@ -31,8 +31,9 @@ export const genId = (prefix?: string, suffix?: string) => {
     )}${suffix ? `-${suffix}` : ''}`.toUpperCase()
 }
 
-interface IdInfo {
+export interface IdInfo {
     match: boolean
+    body?: string
     ts?: number
     prefix?: string
     suffix?: string
@@ -43,9 +44,10 @@ export const parseId = (id: string): IdInfo => {
     const _regex = idRegex.exec(id)
     if (_regex === null) return _res
     _res.match = true
+    _res.body = _regex[3]
     _res.ts = parseInt(_regex[4], idFormat.ts_radix)
     _res.prefix = _regex[2]
-    _res.suffix = _regex[7]
+    _res.suffix = _regex[8]
     return _res
 }
 
@@ -53,13 +55,13 @@ export class GroupId {
     private readonly _prefix?: string
     public readonly group: string
     constructor(prefix?: string) {
-        this.group = genRandom(idFormat.group_length)
+        this.group = genRandom(idFormat.group_length).toUpperCase()
         this._prefix = prefix
     }
     public genId(): string {
         return genId(this._prefix, this.group)
     }
-    public isMember(id): boolean {
+    public isMember(id: string): boolean {
         const idInfo = parseId(id)
         if (idInfo.match) {
             return idInfo.suffix === this.group
@@ -67,10 +69,18 @@ export class GroupId {
             return false
         }
     }
+    public import(id: string): string {
+        const idInfo = parseId(id)
+        if (!idInfo.match) {
+            console.log('IMPORT ERROR')
+            return
+        }
+        return `${this._prefix}-${idInfo.body}-${this.group}`.toUpperCase()
+    }
 }
 
-export const wait = async (timeout): Promise<void> => {
-    return new Promise(resolve => {
+export const wait = async (timeout: number): Promise<void> => {
+    return new Promise((resolve) => {
         setTimeout(() => {
             resolve()
         }, timeout)

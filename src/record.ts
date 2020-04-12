@@ -165,14 +165,6 @@ export class Record<RecInfo> {
     get recordOf(): string {
         return this._recordOf
     }
-    // private get info(): RecInfo {
-    //     return this._info
-    // }
-    // private set info(info: RecInfo) {
-    //     // console.log('something changes.')
-    //     this.mgrCTR.event.emit('edit', this._id)
-    //     this._info = info
-    // }
     get locked(): boolean {
         return this._locked
     }

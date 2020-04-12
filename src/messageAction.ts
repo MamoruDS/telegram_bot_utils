@@ -71,7 +71,9 @@ export class MessageActionMgr extends AppBaseUtilCTR<
         const chatId = message.chat.id
         const userId = message.from.id
         const recs = this._records.filter((rec) => {
-            return rec.info.chat_id === chatId && rec.info.user_id === userId
+            return (
+                rec.info().chat_id === chatId && rec.info().user_id === userId
+            )
         })
         // const actions = this.filter({name: })
         type OrderedAction = {
@@ -90,14 +92,18 @@ export class MessageActionMgr extends AppBaseUtilCTR<
         >(_actions, this)
         for (const orderedAction of _orderedActions) {
             const _action = this.get(orderedAction.idFieldVal)
+            if (
+                !this._bot.application
+                    .get(_action.appInfo.application_name)
+                    .isValidForChat(message.chat)
+            )
+                continue
             const _recId: string = orderedAction.recId
             const _res = await _action.exec(message, _recId)
             if (_res.removeListener) {
                 const _rec = this._records.get(_recId)
-                _action.expireExec(_rec.info.chat_id, _rec.info.user_id)
-                // this.delete(_action.name)
+                _action.expireExec(_rec.info().chat_id, _rec.info().user_id)
                 this._records.delete(_recId)
-                // TODO: maybe delete from action is safe?
             }
             if (!_res.passToCommand) res.passToCommand = false
             if (!_res.passToOtherAction) break
@@ -212,13 +218,13 @@ class MessageAction extends AppBaseUtilItem {
             passToCommand: this._passToCommand,
         }
         const record = this._CTR.record.get(recordId)
-        record.info.executed += 1
+        record.info({ executed: record.info().executed + 1 })
         res.removeListener =
             (await this._execFunction(
                 this._CTR.record.recordMan(record.id),
                 message,
                 this.dataMan(message)
-            )) || record.info.executed >= this._maxExecCounts
+            )) || record.info().executed >= this._maxExecCounts
         return res
     }
 

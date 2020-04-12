@@ -2,7 +2,7 @@ import { EventEmitter } from 'events'
 import * as _ from 'lodash'
 
 import * as utils from './utils'
-import { RecordMgr } from './record'
+import { RecordMgr, RecordMan } from './record'
 import {
     ApplicationDataMan,
     ApplicationInfo,
@@ -76,17 +76,16 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
 
     check(recId: string, verifyKey?: string): void {
         const record = this._records.get(recId, true, false)
-        if (typeof verifyKey !== 'undefined' && verifyKey !== record.info.vk)
+        if (typeof verifyKey !== 'undefined' && verifyKey !== record.info().vk)
             return
-        const dTs = Date.now() - record.info.next
+        const dTs = Date.now() - record.info().next
         const task = this.get(record.recordOf, true, false)
-        if (record.info.executed >= task.maxExecCounts) {
+        if (record.info().executed >= task.maxExecCounts) {
             this._records.delete(record.id)
             return
         }
         if (dTs > task.timeout && !record.locked) {
             record.locked = true
-            // this.event.emit(
             task.event.emit(
                 'timeout',
                 record.id,
@@ -97,12 +96,14 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
         if (dTs > 0 && typeof verifyKey === 'undefined') {
             switch (task.importPolicy.split('-')[1]) {
                 case 'ignore':
-                    while (record.info.next < Date.now() - task.interval) {
-                        record.info.next += task.interval
+                    while (record.info().next < Date.now() - task.interval) {
+                        record.info({
+                            next: record.info().next + task.interval,
+                        })
                     }
                     break
                 case 'restart':
-                    record.info.next = Date.now()
+                    record.info({ next: Date.now() })
                     break
             }
             switch (task.importPolicy.split('-')[0]) {
@@ -110,7 +111,9 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
                     task.exec(record.id)
                     break
                 case 'next':
-                    record.info.next += task.interval
+                    record.info({
+                        next: record.info().next + task.interval,
+                    })
                     this.next(record.id)
                     break
             }
@@ -125,7 +128,7 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
         const record = this._records.get(recId, false, false)
         if (record) {
             const key = utils.genRandom(4)
-            record.info.vk = key
+            record.info({ vk: key })
             setTimeout(() => {
                 this.check(record.id, key)
             }, timeout)
@@ -140,10 +143,13 @@ type ImportPolicy =
     | 'next-ignore'
     | 'next-restart'
 
-type TaskExecFn = (recordInfo: TaskRecordInfo, data: ApplicationDataMan) => void
+type TaskExecFn = (
+    record: RecordMan<TaskRecordInfo>,
+    data: ApplicationDataMan
+) => void
 
 type TaskTimeoutFn = (
-    recordInfo: TaskRecordInfo,
+    record: RecordMan<TaskRecordInfo>,
     data: ApplicationDataMan
 ) => Promise<void>
 
@@ -238,10 +244,10 @@ class Task extends AppBaseUtilItem {
             async (recId: string, imported: boolean) => {
                 const record = this._CTR.record.get(recId, true, false)
                 await this._timeoutFunction(
-                    record.info,
+                    this._CTR.record.recordMan(recId),
                     this.dataMan({
-                        chat_id: record.info.init_chat_id,
-                        user_id: record.info.init_user_id,
+                        chat_id: record.info().init_chat_id,
+                        user_id: record.info().init_user_id,
                     })
                 )
                 this._CTR.check(record.id)
@@ -250,10 +256,10 @@ class Task extends AppBaseUtilItem {
         this._event.addListener('execute', (recId) => {
             const record = this._CTR.record.get(recId, true, false)
             this._execFunction(
-                record.info,
+                this._CTR.record.recordMan(recId),
                 this.dataMan({
-                    chat_id: record.info.init_chat_id,
-                    user_id: record.info.init_user_id,
+                    chat_id: record.info().init_chat_id,
+                    user_id: record.info().init_user_id,
                 })
             )
         })
@@ -261,9 +267,8 @@ class Task extends AppBaseUtilItem {
     async exec(recId: string): Promise<void> {
         const record = this._CTR.record.get(recId, false, false)
         if (record) {
-            record.info.next += this._interval
-            record.info.executed += 1
-            // this.CTR.event.emit('execute', recId, false)
+            record.info({ next: record.info().next += this._interval })
+            record.info({ executed: record.info().executed + 1 })
             this._event.emit('execute', recId)
             await utils.wait(5)
             this._CTR.next(record.id)
