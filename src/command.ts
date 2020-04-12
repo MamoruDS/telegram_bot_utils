@@ -116,12 +116,18 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
             this._botName
         )
     }
-    async check(message: Message): Promise<void> {
+    async checkMessage(message: Message): Promise<void> {
         const cmdInfo = parseCommand(message.text || message.caption)
         if (!cmdInfo.matched) return
         if (cmdInfo.botMentioned && cmdInfo.botMentioned !== this._botName)
             return
         const cmd = this.get(cmdInfo.args[0])
+        if (
+            !this._bot.application
+                .get(cmd.appInfo.application_name)
+                .isValidForChat(message.chat)
+        )
+            return
         if (typeof cmd === 'undefined') return
         if (
             !botMgr

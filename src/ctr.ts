@@ -78,7 +78,9 @@ export class CTR<
         for (const item of this._items) {
             if (item[this._idField] === id) {
                 if (checkDuplicate) {
-                    throw new RangeError('Duplicate item')
+                    throw new RangeError(
+                        `Duplicate item "${id}" in <${this._itemType}>`
+                    )
                 } else {
                     return item
                 }

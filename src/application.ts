@@ -305,7 +305,7 @@ export class Application {
         if (this._isGroupNeedBind) {
             if (chat.type === 'group' || chat.type === 'supergroup') {
                 const bind = this._binds.get(chat.id, false, false)
-                if (typeof bind === undefined) {
+                if (typeof bind === 'undefined') {
                     return false
                 }
                 // TODO: passive mode handle
