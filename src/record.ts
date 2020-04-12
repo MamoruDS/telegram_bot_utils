@@ -3,13 +3,17 @@ import { getRecords, getRecord, setReocrd } from './cache'
 import { ctrMgr, CTR } from './ctr'
 import { BotUtilCTR } from './bot'
 
-export class RecordMan {
+export class RecordMan<RT = any> {
     public readonly id: string
-    private _recordMgr: RecordMgr<any>
+    private _recordMgr: RecordMgr<RT>
 
-    constructor(id: string, mgr: RecordMgr<any>) {
+    constructor(id: string, mgr: RecordMgr<RT>) {
         this.id = id
         this._recordMgr = mgr
+    }
+
+    get info(): RT {
+        return this._recordMgr.get(this.id).info()
     }
 
     delete() {
@@ -106,8 +110,8 @@ export class RecordMgr<RecInfo> extends BotUtilCTR<
     cacheDel(id: string): void {
         setReocrd<RecInfo>(this._botName, this._recordType, id, undefined)
     }
-    recordMan(id: string): RecordMan {
-        return new RecordMan(id, this)
+    recordMan(id: string): RecordMan<RecInfo> {
+        return new RecordMan<RecInfo>(id, this)
     }
 }
 
@@ -128,7 +132,7 @@ interface RecordConstructor<RecInfo> {
     ): Record<RecInfo>
 }
 
-class Record<RecInfo> {
+export class Record<RecInfo> {
     private readonly _id: string
     private readonly _session: string
     private readonly _recordOf: string
@@ -161,13 +165,14 @@ class Record<RecInfo> {
     get recordOf(): string {
         return this._recordOf
     }
-    get info(): RecInfo {
-        return this._info
-    }
-    set info(info: RecInfo) {
-        this.mgrCTR.event.emit('edit', this._id)
-        this._info = info
-    }
+    // private get info(): RecInfo {
+    //     return this._info
+    // }
+    // private set info(info: RecInfo) {
+    //     // console.log('something changes.')
+    //     this.mgrCTR.event.emit('edit', this._id)
+    //     this._info = info
+    // }
     get locked(): boolean {
         return this._locked
     }
@@ -180,6 +185,23 @@ class Record<RecInfo> {
             session: this._session,
             recordOf: this._recordOf,
             info: this._info,
+        }
+    }
+
+    forceSave() {
+        this.mgrCTR.event.emit('edit', this._id)
+    }
+    info(
+        propsUpdate?: {
+            [key in keyof RecInfo]?: RecInfo[key]
+        }
+    ): RecInfo {
+        if (typeof propsUpdate === 'undefined') {
+            return this._info
+        } else {
+            this._info = { ...this._info, ...propsUpdate }
+            this.mgrCTR.event.emit('edit', this._id)
+            return this._info
         }
     }
 }
