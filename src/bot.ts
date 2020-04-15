@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events'
 
 import { CTR, AnyCtor } from './ctr'
-import { Message } from './telegram'
+import { Message, CallbackQuery } from './telegram'
 
 export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
     constructor() {
@@ -43,6 +43,7 @@ export class BotUtils {
     private _commands: CommandMgr
     private _messageActions: MessageActionMgr
     private _tasks: TaskMgr
+    private _inlineKYBDUtils: InlineKYBDUtils
     private _groupUtils: GroupUtils
 
     constructor(...P: ConstructorParameters<BotUtilsConstructor>)
@@ -103,6 +104,9 @@ export class BotUtils {
     get task(): TaskMgr {
         return this._tasks
     }
+    get inlineKYBD(): InlineKYBDUtils {
+        return this._inlineKYBDUtils
+    }
 
     init() {
         this._applications = new ApplicationMgr(this._botName)
@@ -110,6 +114,7 @@ export class BotUtils {
         this._messageActions = new MessageActionMgr(this._botName)
 
         this._tasks = new TaskMgr(this._botName)
+        this._inlineKYBDUtils = new InlineKYBDUtils(this._botName)
         this._groupUtils = new GroupUtils(this._botName)
     }
     getDefaultOptions<O>(
@@ -152,6 +157,13 @@ export class BotUtils {
             this.onError(err)
         }
     }
+    onCallbackQuery(callbackQuery: CallbackQuery): void {
+        try {
+            this._inlineKYBDUtils.checkCallbackQuery(callbackQuery)
+        } catch (err) {
+            this.onError(err)
+        }
+    }
     private onError(err: Error): void {
         if (this._event.listenerCount('error') === 0) {
             throw err
@@ -189,3 +201,4 @@ import { CommandMgr } from './command'
 import { GroupUtils } from './group'
 import { TaskMgr } from './task'
 import { MessageActionMgr } from './messageAction'
+import { InlineKYBDUtils } from './keyboardUtils'
