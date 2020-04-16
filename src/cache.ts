@@ -26,24 +26,46 @@ const db = low(adapter)
 
 db.defaults({ bots: {} }).write()
 
+const parseDBPath = (path: string[]) => {
+    return path
+        .map((p) => {
+            if (!Number.isNaN(parseInt(p))) {
+                p = `_${p}`
+            }
+            return p
+        })
+        .join('.')
+}
+
+const get = (path: string[]) => {
+    return db.get(parseDBPath(path))
+}
+
+const set = (path: string[], data?: any) => {
+    if (typeof data === 'undefined') {
+        return db.unset(parseDBPath(path))
+    }
+    return db.set(parseDBPath(path), data)
+}
+
 export const setCallbackData = (
     botId: string,
     id: string,
     data: string | null
 ): void => {
     if (data === null) {
-        db.unset(['bots', botId, 'callback_data', id]).write()
+        set(['bots', botId, 'callback_data', id]).write()
     } else {
-        db.set(['bots', botId, 'callback_data', id], data).write()
+        set(['bots', botId, 'callback_data', id], data).write()
     }
 }
 
 export const getCallbackData = (botId: string, id: string): string => {
-    return db.get(['bots', botId, 'callback_data', id]).value()
+    return get(['bots', botId, 'callback_data', id]).value()
 }
 
 export const removeCallbackDataByGroup = (botId: string, group: string) => {
-    db.update(['bots', botId, 'callback_data'], datas => {
+    db.update(['bots', botId, 'callback_data'], (datas) => {
         for (const _id of Object.keys(datas)) {
             if (_id.lastIndexOf(group) !== -1) {
                 datas[_id] = undefined
@@ -57,8 +79,9 @@ export function getRecords<I>(
     botName: string,
     recordType: string
 ): RecSTO<I>[] {
-    const _recs = db.get(['bots', botName, recordType]).value()
-    return Object.keys(_recs).map(id => {
+    const _recs = get(['bots', botName, recordType]).value()
+    if (!_recs) return []
+    return Object.keys(_recs).map((id) => {
         const _info = JSON.parse(_recs[id])
         return {
             id: id,
@@ -74,7 +97,7 @@ export function getRecord<I>(
     recordType: string,
     recId: string
 ): RecSTO<I> {
-    const _info = db.get(['bots', botName, recordType, recId]).value()[0]
+    const _info = get(['bots', botName, recordType, recId]).value()[0]
     return JSON.parse({ ..._info, id: recId })
 }
 
@@ -83,9 +106,8 @@ export function setReocrd<I>(
     recordType: string,
     recId: string,
     rec?: RecSTO<I>
-) {
-    db.set(
-        ['bots', botName, recordType, recId],
+): void {
+    const _data =
         typeof rec === 'undefined'
             ? undefined
             : JSON.stringify({
@@ -93,7 +115,7 @@ export function setReocrd<I>(
                   recordOf: rec.recordOf,
                   info: rec.info,
               })
-    ).write()
+    set(['bots', botName, recordType, recId], _data).write()
 }
 
 export const initApplication = (botId: string, applicationName: string) => {
@@ -107,7 +129,7 @@ export const setApplicationChatBinds = (
     binds: ApplicationChatBindSTO[]
 ): void => {
     const _bindsPath = ['bots', botId, 'applications', applicationName, 'binds']
-    db.set(_bindsPath, binds).write()
+    set(_bindsPath, binds).write()
     return
 }
 
@@ -116,7 +138,7 @@ export const getApplicationChatBinds = (
     applicationName: string
 ): ApplicationChatBindSTO[] => {
     const _bindsPath = ['bots', botId, 'applications', applicationName, 'binds']
-    return db.get(_bindsPath).value()
+    return get(_bindsPath).value()
 }
 
 type ApplicationDataSTO = {
@@ -151,8 +173,8 @@ export const setUserData = (
     link: Required<DataSpace>
 ): string | 'removed' => {
     const _appPath = ['bots', botId, 'applications', application, 'userData']
-    if (db.get(_appPath).value() === undefined && data !== null) {
-        db.set(_appPath, []).write()
+    if (get(_appPath).value() === undefined && data !== null) {
+        set(_appPath, []).write()
     }
     let _data = db
         .get(_appPath)
@@ -160,15 +182,10 @@ export const setUserData = (
         .value()
     if (_data !== undefined) {
         if (data === null) {
-            db.get(_appPath)
-                .remove({ id: _data.id })
-                .write()
+            get(_appPath).remove({ id: _data.id }).write()
             return 'removed'
         } else {
-            db.get(_appPath)
-                .find({ id: _data.id })
-                .assign({ data: data })
-                .write()
+            get(_appPath).find({ id: _data.id }).assign({ data: data }).write()
             return _data.id
         }
     } else {
@@ -180,9 +197,7 @@ export const setUserData = (
             user_id: link.user_id,
             data: data,
         }
-        db.get(_appPath)
-            .push(_sto)
-            .write()
+        get(_appPath).push(_sto).write()
         return _id
     }
 }
