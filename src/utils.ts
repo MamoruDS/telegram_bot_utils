@@ -11,10 +11,7 @@ const idFormat = {
     group_length: 10,
 }
 
-const idRegex = new RegExp(
-    `((^\\w{${idFormat.prefix_length_min},${idFormat.prefix_length_max}})-|^)((\\w{1,${idFormat.phrase_1_length}})-([A-F\\d]{1,})-(\\w{1,${idFormat.phrase_1_length}}))(-(\\w{${idFormat.suffix_length_min},${idFormat.suffix_length_max}})$|$)`,
-    'gm'
-)
+const regStr = `((^\\w{${idFormat.prefix_length_min},${idFormat.prefix_length_max}})-|^)((\\w{1,${idFormat.phrase_1_length}})-([A-F\\d]{1,})-(\\w{1,${idFormat.phrase_1_length}}))(-(\\w{${idFormat.suffix_length_min},${idFormat.suffix_length_max}})$|$)`
 
 export const genRandom = (length: number): string => {
     if (length < 1 || length > 10) {
@@ -41,7 +38,7 @@ export interface IdInfo {
 
 export const parseId = (id: string): IdInfo => {
     let _res = { match: false } as IdInfo
-    const _regex = idRegex.exec(id)
+    const _regex = new RegExp(regStr, 'gm').exec(id)
     if (_regex === null) return _res
     _res.match = true
     _res.body = _regex[3]
@@ -72,8 +69,7 @@ export class GroupId {
     public import(id: string): string {
         const idInfo = parseId(id)
         if (!idInfo.match) {
-            console.log('IMPORT ERROR')
-            return
+            return undefined
         }
         return `${this._prefix}-${idInfo.body}-${this.group}`.toUpperCase()
     }
