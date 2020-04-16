@@ -365,7 +365,7 @@ export class InlineKYBDUtils extends AppBaseUtilCTR<
             previousSessionRecord: false,
         } as CallbackDataInfo
         try {
-            _inf.previousSessionRecord = !this._records._session.isMember(
+            _inf.previousSessionRecord = !this._records.isCurSessionRec(
                 callbackQuery.data
             )
             Object.assign(_inf, decodeCallbackInf(callbackQuery.data))
@@ -375,7 +375,7 @@ export class InlineKYBDUtils extends AppBaseUtilCTR<
         }
         _inf.KYBD = !_inf.previousSessionRecord
             ? _inf.KYBD
-            : this._records._session.import(_inf.KYBD)
+            : this._records.renewId(_inf.KYBD)
         const record = this._records.get(_inf.KYBD, false, false)
         if (typeof record === 'undefined') {
             // TODO: handle invalid button

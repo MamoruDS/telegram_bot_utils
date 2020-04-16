@@ -36,7 +36,7 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
 
     add(
         name: string,
-        execFn: TaskExecFn,
+        execFn: CustomFn,
         interval: number,
         maxExecCounts: number,
         options: TaskOptions,
@@ -75,6 +75,7 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
     }
 
     check(recId: string, verifyKey?: string): void {
+        if (!this._records.isCurSessionRec(recId)) return
         const record = this._records.get(recId, true, false)
         if (typeof verifyKey !== 'undefined' && verifyKey !== record.info().vk)
             return
@@ -143,21 +144,20 @@ type ImportPolicy =
     | 'next-ignore'
     | 'next-restart'
 
-type TaskExecFn = (
-    record: RecordMan<TaskRecordInfo>,
-    data: ApplicationDataMan
-) => void
-
-type TaskTimeoutFn = (
-    record: RecordMan<TaskRecordInfo>,
-    data: ApplicationDataMan
-) => Promise<void>
+type CustomFn = (inf: {
+    record: RecordMan<TaskRecordInfo>
+    data: {
+        chat_id: number
+        user_id: number
+        user_data: ApplicationDataMan
+    }
+}) => Promise<void>
 
 type TaskOptions = {
     description?: string
     timeout?: number
     import_policy?: ImportPolicy
-    timeout_function?: TaskTimeoutFn
+    timeout_function?: CustomFn
 }
 
 const defaultTaskOptions: Required<TaskOptions> = {
@@ -170,7 +170,7 @@ const defaultTaskOptions: Required<TaskOptions> = {
 interface TaskConstructor {
     new (
         name: string,
-        execFn: TaskExecFn,
+        execFn: CustomFn,
         interval: number,
         maxExecCounts: number,
         options: TaskOptions,
@@ -182,18 +182,18 @@ interface TaskConstructor {
 class Task extends AppBaseUtilItem {
     protected _event: EventEmitter
     private _name: string
-    private _execFunction: TaskExecFn
+    private _execFunction: CustomFn
     private _interval: number
     private _maxExecCounts: number
     private _description: string
     private _importPolicy: ImportPolicy
     private _timeout: number
-    private _timeoutFunction: TaskTimeoutFn
+    private _timeoutFunction: CustomFn
 
     constructor(...P: ConstructorParameters<TaskConstructor>)
     constructor(
         name: string,
-        execFn: TaskExecFn,
+        execFn: CustomFn,
         interval: number,
         maxExecCounts: number,
         options: TaskOptions,
@@ -228,6 +228,9 @@ class Task extends AppBaseUtilItem {
     get interval(): number {
         return this._interval
     }
+    get description(): string {
+        return this._description
+    }
     get maxExecCounts(): number {
         return this._maxExecCounts
     }
@@ -243,25 +246,33 @@ class Task extends AppBaseUtilItem {
             'timeout',
             async (recId: string, imported: boolean) => {
                 const record = this._CTR.record.get(recId, true, false)
-                await this._timeoutFunction(
-                    this._CTR.record.recordMan(recId),
-                    this.dataMan({
+                await this._timeoutFunction({
+                    record: this._CTR.record.recordMan(recId),
+                    data: {
                         chat_id: record.info().init_chat_id,
                         user_id: record.info().init_user_id,
-                    })
-                )
+                        user_data: this.dataMan({
+                            chat_id: record.info().init_chat_id,
+                            user_id: record.info().init_user_id,
+                        }),
+                    },
+                })
                 this._CTR.check(record.id)
             }
         )
         this._event.addListener('execute', (recId) => {
             const record = this._CTR.record.get(recId, true, false)
-            this._execFunction(
-                this._CTR.record.recordMan(recId),
-                this.dataMan({
+            this._execFunction({
+                record: this._CTR.record.recordMan(recId),
+                data: {
                     chat_id: record.info().init_chat_id,
                     user_id: record.info().init_user_id,
-                })
-            )
+                    user_data: this.dataMan({
+                        chat_id: record.info().init_chat_id,
+                        user_id: record.info().init_user_id,
+                    }),
+                },
+            })
         })
     }
     async exec(recId: string): Promise<void> {

@@ -96,9 +96,9 @@ export class CTR<
     }
     add(...P: ConstructorParameters<ItemCtor>): ItemType {
         const item = new this._newItem(...P)
-        return this.addItem(item)
+        return this._addItem(item)
     }
-    protected addItem(item: ItemType): ItemType {
+    protected _addItem(item: ItemType): ItemType {
         this.get(item[this._idField], false, true)
         this._items.push(item)
         this._event.emit('add', item[this._idField])

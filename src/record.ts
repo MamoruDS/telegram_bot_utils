@@ -1,4 +1,4 @@
-import { GroupId } from './utils'
+import { GroupId, parseId } from './utils'
 import { getRecords, getRecord, setReocrd } from './cache'
 import { ctrMgr, CTR } from './ctr'
 import { BotUtilCTR } from './bot'
@@ -26,7 +26,7 @@ export class RecordMgr<RecInfo> extends BotUtilCTR<
     RecordConstructor<RecInfo>
 > {
     private _recordType: string
-    private _session: GroupId
+    private readonly _session: GroupId
 
     constructor(botName: string, recordType: string) {
         super(Record, 'Record', 'id', botName)
@@ -52,9 +52,21 @@ export class RecordMgr<RecInfo> extends BotUtilCTR<
             this._session.group,
             this.CTRUID
         )
-        return super.addItem(rec)
+        return super._addItem(rec)
     }
-    import(recordOf: string) {
+    get(
+        id: string,
+        checkExist: boolean = true,
+        checkDuplicate: boolean = false
+    ): Record<RecInfo> {
+        if (this._session.isMember(id))
+            return super.get(id, checkExist, checkDuplicate)
+        return undefined
+    }
+    isCurSessionRec(id: string): boolean {
+        return this._session.isMember(id)
+    }
+    import(recordOf: string): void {
         const _recs = this.cacheGet()
         for (const _rec of _recs) {
             if (_rec.recordOf === recordOf) {
@@ -65,6 +77,9 @@ export class RecordMgr<RecInfo> extends BotUtilCTR<
             }
             continue
         }
+    }
+    renewId(id: string): string {
+        return this._session.import(id)
     }
     updateCache(id: string): void {
         // const rec = this.get(id, false, false)

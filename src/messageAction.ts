@@ -34,7 +34,7 @@ export class MessageActionMgr extends AppBaseUtilCTR<
 
     add(
         name: string,
-        execFn: ActionFn,
+        execFn: CustomFn,
         options: MessageActionOptions = {},
         applicationInfo: ApplicationInfo
     ) {
@@ -42,7 +42,6 @@ export class MessageActionMgr extends AppBaseUtilCTR<
         return super.add(name, execFn, options, applicationInfo, this._botName)
     }
     async new(actionName: string, chatId: number, userId: number) {
-        // this.get(actionName).add(chatId, userId)
         const _recs = this._records.filterAdv(actionName, {
             chat_id: chatId,
             user_id: userId,
@@ -102,7 +101,11 @@ export class MessageActionMgr extends AppBaseUtilCTR<
             const _res = await _action.exec(message, _recId)
             if (_res.removeListener) {
                 const _rec = this._records.get(_recId)
-                _action.expireExec(_rec.info().chat_id, _rec.info().user_id)
+                _action.expireExec(
+                    _rec.info().chat_id,
+                    _rec.info().user_id,
+                    _rec.id
+                )
                 this._records.delete(_recId)
             }
             if (!_res.passToCommand) res.passToCommand = false
@@ -112,32 +115,40 @@ export class MessageActionMgr extends AppBaseUtilCTR<
     }
 }
 
-type ActionFn = (
-    record: RecordMan,
-    msg: Message,
-    data: ApplicationDataMan
-) => Promise<boolean>
+type CustomInitFn = (inf: {
+    data: {
+        chat_id: number
+        user_id: number
+        user_data: ApplicationDataMan
+    }
+}) => Promise<void>
 
-type ActionAutoFn = (
-    chat_id: number,
-    user_id: number,
-    data: ApplicationDataMan
-) => Promise<any>
+type CustomAutoFn = (inf: {
+    record: RecordMan<MessageListenerInfo>
+    data: {
+        chat_id: number
+        user_id: number
+        user_data: ApplicationDataMan
+    }
+}) => Promise<void>
 
-type DuplicateFn = (
-    chat_id: number,
-    user_id: number,
-    data: ApplicationDataMan,
-    record: RecordMan
-) => Promise<any>
+type CustomFn = (inf: {
+    record: RecordMan<MessageListenerInfo>
+    message: Message
+    data: {
+        chat_id: number
+        user_id: number
+        user_data: ApplicationDataMan
+    }
+}) => Promise<boolean>
 
 type MessageActionOptions = {
     max_exec_counts?: number
     pass_to_other_action?: boolean
     pass_to_command?: boolean
-    init_function?: ActionAutoFn
-    duplicate_function?: DuplicateFn
-    expire_function?: ActionAutoFn
+    init_function?: CustomInitFn
+    duplicate_function?: CustomAutoFn
+    expire_function?: CustomAutoFn
 }
 
 const defaultMessageActionOptions: Required<MessageActionOptions> = {
@@ -152,7 +163,7 @@ const defaultMessageActionOptions: Required<MessageActionOptions> = {
 interface MessageActionConstructor {
     new (
         name: string,
-        execFn: ActionFn,
+        execFn: CustomFn,
         options: MessageActionOptions,
         appInfo: ApplicationInfo,
         botName: string
@@ -161,18 +172,18 @@ interface MessageActionConstructor {
 
 class MessageAction extends AppBaseUtilItem {
     private readonly _name: string
-    private readonly _execFunction: ActionFn
+    private readonly _execFunction: CustomFn
     private readonly _maxExecCounts: number
     private readonly _passToOtherAction: boolean
     private readonly _passToCommand: boolean
-    private readonly _initFunction: ActionAutoFn
-    private readonly _duplicateFunction: DuplicateFn
-    private readonly _expireFunction: ActionAutoFn
+    private readonly _initFunction: CustomInitFn
+    private readonly _duplicateFunction: CustomAutoFn
+    private readonly _expireFunction: CustomAutoFn
 
     constructor(...P: ConstructorParameters<MessageActionConstructor>)
     constructor(
         name: string,
-        execFn: ActionFn,
+        execFn: CustomFn,
         options: MessageActionOptions,
         appInfo: ApplicationInfo,
         botName: string
@@ -220,34 +231,45 @@ class MessageAction extends AppBaseUtilItem {
         const record = this._CTR.record.get(recordId)
         record.info({ executed: record.info().executed + 1 })
         res.removeListener =
-            (await this._execFunction(
-                this._CTR.record.recordMan(record.id),
-                message,
-                this.dataMan(message)
-            )) || record.info().executed >= this._maxExecCounts
+            (await this._execFunction({
+                record: this._CTR.record.recordMan(record.id),
+                message: message,
+                data: {
+                    chat_id: message.chat.id,
+                    user_id: message.from.id,
+                    user_data: this.dataMan(message),
+                },
+            })) || record.info().executed >= this._maxExecCounts
         return res
     }
 
     async initExec(chatId: number, userId: number) {
-        this._initFunction(
-            chatId,
-            userId,
-            this.dataMan({ chat_id: chatId, user_id: userId })
-        )
+        this._initFunction({
+            data: {
+                chat_id: chatId,
+                user_id: userId,
+                user_data: this.dataMan({ chat_id: chatId, user_id: userId }),
+            },
+        })
     }
     async duplicateExec(chatId: number, userId: number, recId: string) {
-        this._duplicateFunction(
-            chatId,
-            userId,
-            this.dataMan({ chat_id: chatId, user_id: userId }),
-            this._CTR.record.recordMan(recId)
-        )
+        this._duplicateFunction({
+            record: this._CTR.record.recordMan(recId),
+            data: {
+                chat_id: chatId,
+                user_id: userId,
+                user_data: this.dataMan({ chat_id: chatId, user_id: userId }),
+            },
+        })
     }
-    async expireExec(chatId: number, userId: number) {
-        this._expireFunction(
-            chatId,
-            userId,
-            this.dataMan({ chat_id: chatId, user_id: userId })
-        )
+    async expireExec(chatId: number, userId: number, recId: string) {
+        this._expireFunction({
+            record: this._CTR.record.recordMan(recId),
+            data: {
+                chat_id: chatId,
+                user_id: userId,
+                user_data: this.dataMan({ chat_id: chatId, user_id: userId }),
+            },
+        })
     }
 }

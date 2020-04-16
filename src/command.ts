@@ -104,7 +104,7 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
 
     add(
         commandString: string,
-        execFunc: CommandExecuteFunction,
+        execFunc: CustomFn,
         options: CommandOptions = {},
         applicationInfo: ApplicationInfo
     ) {
@@ -141,7 +141,15 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
         if (!cmd.messageFilter(message)) return
         try {
             const _args = await argumentCheck(cmdInfo.args, cmd.check)
-            cmd.exec(_args, message, dataMan)
+            cmd.exec({
+                arguments: _args,
+                message: message,
+                data: {
+                    chat_id: message.chat.id,
+                    user_id: message.from.id,
+                    user_data: dataMan,
+                },
+            })
         } catch (e) {
             cmd.argumentErrorHandle(message, e)
         }
@@ -158,11 +166,15 @@ type ArgumentCheck = {
 
 type CommandFilter = 'public' | 'registered' | 'owner' | 'function'
 
-type CommandExecuteFunction = (
-    args: string[],
-    message: Message,
-    data: ApplicationDataMan
-) => void
+type CustomFn = (inf: {
+    arguments: string[]
+    message: Message
+    data: {
+        chat_id: number
+        user_id: number
+        user_data: ApplicationDataMan
+    }
+}) => void
 
 export interface CommandOptions {
     argument_check?: ArgumentCheck[]
@@ -185,7 +197,7 @@ const defaultCommandOptions: Required<CommandOptions> = {
 interface CommandConstructor {
     new (
         commandString: string,
-        execFunc: CommandExecuteFunction,
+        execFunc: CustomFn,
         options: CommandOptions,
         appInfo: ApplicationInfo,
         botName: string
@@ -194,7 +206,7 @@ interface CommandConstructor {
 
 class Command extends AppBaseUtilItem {
     private readonly _command: string
-    private readonly _execFunction: CommandExecuteFunction
+    private readonly _execFunction: CustomFn
     private readonly _argumentCheck: ArgumentCheck[]
     private readonly _argumentErrorFunction: (
         message: Message,
@@ -207,7 +219,7 @@ class Command extends AppBaseUtilItem {
     constructor(...P: ConstructorParameters<CommandConstructor>)
     constructor(
         commandString: string,
-        execFunc: CommandExecuteFunction,
+        execFunc: CustomFn,
         options: CommandOptions,
         appInfo: ApplicationInfo,
         botName: string
@@ -261,9 +273,7 @@ class Command extends AppBaseUtilItem {
         }
         return false
     }
-    exec(
-        ...args: Parameters<CommandExecuteFunction>
-    ): ReturnType<CommandExecuteFunction> {
+    exec(...args: Parameters<CustomFn>): ReturnType<CustomFn> {
         return this._execFunction(...args)
     }
     argumentErrorHandle(message: Message, err: Error) {
