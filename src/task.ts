@@ -135,6 +135,10 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
             }, timeout)
         }
     }
+    forceExec(recId: string): void {
+        const record = this._records.get(recId, true, false)
+        this.get(record.recordOf).exec(record.id)
+    }
 }
 
 type ImportPolicy =
