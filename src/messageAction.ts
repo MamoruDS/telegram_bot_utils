@@ -52,12 +52,13 @@ export class MessageActionMgr extends AppBaseUtilCTR<
             return
         }
         const action = this.get(actionName)
-        await action.initExec(chatId, userId)
+        const res = await action.initExec(chatId, userId)
         this._records.add(actionName, {
             chat_id: chatId,
             user_id: userId,
             executed: 0,
         })
+        return res
     }
     async checkMessage(
         message: Message
@@ -243,8 +244,8 @@ class MessageAction extends AppBaseUtilItem {
         return res
     }
 
-    async initExec(chatId: number, userId: number) {
-        this._initFunction({
+    async initExec(chatId: number, userId: number): Promise<any> {
+        return this._initFunction({
             data: {
                 chat_id: chatId,
                 user_id: userId,
@@ -252,7 +253,11 @@ class MessageAction extends AppBaseUtilItem {
             },
         })
     }
-    async duplicateExec(chatId: number, userId: number, recId: string) {
+    async duplicateExec(
+        chatId: number,
+        userId: number,
+        recId: string
+    ): Promise<void> {
         this._duplicateFunction({
             record: this._CTR.record.recordMan(recId),
             data: {
