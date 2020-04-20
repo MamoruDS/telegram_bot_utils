@@ -1,11 +1,27 @@
 import { BotMgr } from './bot'
+import * as botAPI from 'node-telegram-bot-api'
 
-export const telegramBotUtils = {
-    botMgr: undefined,
+const _bots = new BotMgr()
+const _defaults = {
+    maxInlineButtonWidth: 16,
 } as {
-    botMgr: BotMgr
+    maxInlineButtonWidth: number
+}
+const _botAPI: botAPI = undefined
+
+const _hasBotAPIModule = () => {
+    try {
+        const _b = new botAPI('N', { polling: false })
+        return typeof _b.closeWebHook === 'function'
+    } catch (e) {
+        return false
+    }
 }
 
-export const botMgr = new BotMgr()
+export {
+    _bots as bots,
+    _defaults as defaults,
+    _botAPI as api,
+    _hasBotAPIModule as hasBotAPIModule,
+}
 
-telegramBotUtils.botMgr = botMgr
