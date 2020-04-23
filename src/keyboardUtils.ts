@@ -1,8 +1,6 @@
-import { botMgr } from './main'
-import * as types from './types'
+import * as MAIN from './main'
 import * as utils from './utils'
-import * as cache from './cache'
-import { Message, CallbackQuery, InlineKeyboardButton } from './telegram'
+import { CallbackQuery, InlineKeyboardButton } from './telegram'
 import {
     ApplicationDataMan,
     ApplicationInfo,
@@ -10,50 +8,6 @@ import {
     AppBaseUtilItem,
 } from './application'
 import { RecordMan, RecordMgr } from './record'
-
-const maxRowWidth = types.maxInlineWidth
-
-export const genInlineKeyBoard = (
-    botId: string,
-    initUserId: number,
-    buttons: types.inlineKeyboardButton[]
-): InlineKeyboardButton[][] => {
-    if (buttons.length === 0) return undefined
-    const keyBoard = new InlineKeyboard()
-    const group = new utils.GroupId('CD')
-    for (const btn of buttons) {
-        if (btn.url) {
-            keyBoard.addKeyboardButton(
-                genInlineKYBDBtnWithUrl(btn.text, btn.url, btn.url_redir),
-                btn.keyboard_row_full_width,
-                btn.keyboard_row_auto_append,
-                btn.keyboard_row_force_append,
-                btn.keyboard_row_force_append_row_num
-            )
-            continue
-        }
-        if (btn.callback_data) {
-            keyBoard.addKeyboardButton(
-                genInlineKYBDBtnWithCallbackData(
-                    btn.text,
-                    {
-                        action_name: btn.action_name,
-                        init_user_id: initUserId,
-                        data: btn.callback_data,
-                    },
-                    botId,
-                    group
-                ),
-                btn.keyboard_row_full_width,
-                btn.keyboard_row_auto_append,
-                btn.keyboard_row_force_append,
-                btn.keyboard_row_force_append_row_num
-            )
-            continue
-        }
-    }
-    return keyBoard.getInlineKeyBoard()
-}
 
 const genInlineKYBDBtnWithUrl = (
     text: string,
@@ -75,55 +29,6 @@ const genInlineKYBDBtnWithUrl = (
         url: _url,
     }
     return keyButton
-}
-
-const genInlineKYBDBtnWithCallbackData = (
-    text: string,
-    callbackData: types.CallbackData,
-    botId: string,
-    group: utils.GroupId
-): InlineKeyboardButton => {
-    const id = setCachedCallbackData(botId, group, callbackData)
-    const keyButton: InlineKeyboardButton = {
-        text: text,
-        callback_data: id,
-    }
-    return keyButton
-}
-
-export const setCachedCallbackData = (
-    botId: string,
-    groupId: utils.GroupId,
-    callbackData: types.CallbackData
-): string => {
-    const definedData = ['', 0, undefined] as types.definedCallbackData
-    const keys = types.callbackDataIndex
-    for (const key of Object.keys(keys)) {
-        definedData[keys[key]] = callbackData[key]
-    }
-    const id = groupId.genId()
-    cache.setCallbackData(botId, id, JSON.stringify(definedData))
-    return id
-}
-
-export const getCachedCallbackData = (
-    botId: string,
-    dataId: string
-): { idInfo: utils.IdInfo; data: types.CallbackData } => {
-    const res = {} as { idInfo: utils.IdInfo; data: types.CallbackData }
-    res.idInfo = utils.parseId(dataId)
-    if (res.idInfo.match) {
-        try {
-            const definedData = JSON.parse(cache.getCallbackData(botId, dataId))
-            const keys = types.callbackDataIndex
-            for (const key of Object.keys(keys)) {
-                res.data[key] = definedData[keys[key]]
-            }
-        } catch (e) {
-            //
-        }
-    }
-    return res
 }
 
 export class InlineKeyboard {
@@ -161,7 +66,7 @@ export class InlineKeyboard {
         if (autoAppend) {
             const _validRows = this._rowWidths
                 .map((v, i) => {
-                    if (v + textLength > maxRowWidth) {
+                    if (v + textLength > MAIN.options.maxInlineButtonWidth) {
                         return -1
                     } else return i
                 })
@@ -429,7 +334,7 @@ class InlineKYBDAciton extends AppBaseUtilItem {
         super(appInfo, botName)
         this._name = name
         this._execFunction = execFn
-        const _options = botMgr
+        const _options = MAIN.bots
             .get(this._botName)
             .getDefaultOptions<InlineKYBDOptions>(
                 defaultInlineKYBDOptions,

@@ -1,5 +1,5 @@
 import { Message } from './telegram'
-import { botMgr } from './main'
+import * as MAIN from './main'
 import {
     ApplicationDataMan,
     ApplicationInfo,
@@ -130,7 +130,7 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
             return
         if (typeof cmd === 'undefined') return
         if (
-            !botMgr
+            !MAIN.bots
                 .get(this._botName)
                 .application.get(cmd.appInfo.application_name)
                 .isValidForChat(message.chat)
@@ -225,7 +225,7 @@ class Command extends AppBaseUtilItem {
         botName: string
     ) {
         super(appInfo, botName)
-        const _options = botMgr
+        const _options = MAIN.bots
             .get(this._botName)
             .getDefaultOptions<CommandOptions>(defaultCommandOptions, options)
         this._command = commandString
@@ -238,7 +238,7 @@ class Command extends AppBaseUtilItem {
     }
 
     private get CTR(): CommandMgr {
-        return botMgr.get(this._botName).command
+        return MAIN.bots.get(this._botName).command
     }
     get cmd(): string {
         return this._command
@@ -263,9 +263,9 @@ class Command extends AppBaseUtilItem {
         }
         if (this._filter === 'owner') {
             return (
-                message.from.id === botMgr.get(this._botName).owner.id ||
+                message.from.id === MAIN.bots.get(this._botName).owner.id ||
                 message.from.username ===
-                    botMgr.get(this._botName).owner.username
+                    MAIN.bots.get(this._botName).owner.username
             )
         }
         if (this._filter === 'function') {

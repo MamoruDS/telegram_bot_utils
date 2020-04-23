@@ -1,4 +1,4 @@
-import { botMgr } from './main'
+import * as MAIN from './main'
 import { Message } from './telegram'
 import {
     ApplicationDataMan,
@@ -191,7 +191,7 @@ class MessageAction extends AppBaseUtilItem {
     ) {
         super(appInfo, botName)
         this._name = name
-        const _options = botMgr
+        const _options = MAIN.bots
             .get(this._botName)
             .getDefaultOptions<MessageActionOptions>(
                 defaultMessageActionOptions,

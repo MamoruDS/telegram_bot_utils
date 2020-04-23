@@ -2,7 +2,7 @@ import * as _ from 'lodash'
 
 import { AnyCtor } from './ctr'
 import { BotUtils, BotUtilCTR } from './bot'
-import { botMgr } from './main'
+import * as MAIN from './main'
 import * as cache from './cache'
 import { Chat, Message } from './telegram'
 
@@ -70,8 +70,9 @@ class ApplicationChatBind {
     }
 
     private get _CTR(): ApplicationChatBindMgr {
-        return botMgr.get(this._botName).application.get(this._applicationName)
-            .chatBind
+        return MAIN.bots
+            .get(this._botName)
+            .application.get(this._applicationName).chatBind
     }
     get chatId(): number {
         return this._chatId
@@ -109,7 +110,9 @@ export class ApplicationDataMan {
     }
 
     get application(): Application {
-        return botMgr.get(this._botName).application.get(this._applicationName)
+        return MAIN.bots
+            .get(this._botName)
+            .application.get(this._applicationName)
     }
     get dataSpace(): DataSpace {
         return {
@@ -136,7 +139,7 @@ export class ApplicationDataMan {
         }
         this.application.setUserData(_data, this.dataSpace)
     }
-    delete = (): void => {
+    clean = (): void => {
         this.set(null)
     }
 }
@@ -239,8 +242,7 @@ export class Application {
         const options = P[1]
         const botName = P[2]
         this._botName = botName
-        // const _options = defaults.options_application(options)
-        const _options = botMgr
+        const _options = MAIN.bots
             .get(this._botName)
             .getDefaultOptions<ApplicationOptions>(
                 defaultApplicationOptions,
@@ -249,7 +251,7 @@ export class Application {
         if (_options.priority === -Infinity) {
             try {
                 _options.priority =
-                    botMgr.get(this._botName).application.last.priority + 1
+                    MAIN.bots.get(this._botName).application.last.priority + 1
             } catch (err) {
                 //
                 _options.priority = 0
@@ -266,7 +268,7 @@ export class Application {
     }
 
     private get _CTR(): ApplicationMgr {
-        return botMgr.get(this._botName).application
+        return MAIN.bots.get(this._botName).application
     }
     get name(): string {
         return this._name
@@ -358,15 +360,7 @@ const DefaultApplicationInfo: Required<ApplicationInfo> = {
 export class AppBaseUtilCTR<
     T,
     C extends AnyCtor<T> = AnyCtor<T>
-> extends BotUtilCTR<T, C> {
-    // constructor(typeclass: new (...P: any[]) => T, botName: string) {
-    //     super(typeclass, botName)
-    // }
-    // add(appInfo: ApplicationInfo, ...properties: any[]) {
-    //     return super.add(...properties)
-    // }
-    // order() {}
-}
+> extends BotUtilCTR<T, C> {}
 
 export class AppBaseUtilItem {
     protected readonly _botName: string
@@ -381,7 +375,7 @@ export class AppBaseUtilItem {
     }
 
     protected get _bot(): BotUtils {
-        return botMgr.get(this._botName)
+        return MAIN.bots.get(this._botName)
     }
     protected get _app(): Application {
         return this._bot.application.get(this._applicationInfo.application_name)
