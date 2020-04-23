@@ -7,6 +7,7 @@ interface NodeTGBotAPIConstructor {
 }
 
 import { CTR, AnyCtor } from './ctr'
+import { copy } from './utils'
 import { Message, CallbackQuery } from './telegram'
 
 export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
@@ -150,7 +151,7 @@ export class BotUtils {
         defaultOptions: Required<O>,
         inputOptions: O = {} as O
     ): Required<O> {
-        const _options = { ...defaultOptions }
+        const _options = copy(defaultOptions) as Required<O>
         if (
             typeof inputOptions !== 'object' ||
             inputOptions === null ||

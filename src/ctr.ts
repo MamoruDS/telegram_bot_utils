@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events'
-import { genId } from './utils'
+import { genId, copy } from './utils'
 
 class CTRMgr {
     private CTRs: {
@@ -130,7 +130,7 @@ export class CTR<
               }
             | filterCallbackFn<ItemType>
     ): ItemType[] {
-        const _items = [...this._items]
+        const _items = copy(this._items)
         if (typeof filters === 'object') {
             return _items.filter((item) => {
                 for (const key of Object.keys(filters)) {
@@ -152,7 +152,7 @@ export class CTR<
             array?: ItemType[]
         ) => any
     ): any[] {
-        const _items = [...this._items]
+        const _items = copy(this._items)
         return _items.map(callbackfn)
     }
 }

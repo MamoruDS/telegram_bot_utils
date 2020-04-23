@@ -82,3 +82,22 @@ export const wait = async (timeout: number): Promise<void> => {
         }, timeout)
     })
 }
+
+export const copy = <T>(source: T): T => {
+    if (source === null) return source
+    if (Array.isArray(source)) {
+        const _t = [] as any[]
+        source.map((v) => {
+            _t.push(copy(v))
+        })
+        return _t as any
+    }
+    if (typeof source === 'object') {
+        const _t = {} as T
+        for (const key of Object.keys(source)) {
+            _t[key] = copy(source[key])
+        }
+        return _t
+    }
+    return source
+}

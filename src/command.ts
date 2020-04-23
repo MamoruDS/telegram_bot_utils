@@ -6,6 +6,7 @@ import {
     AppBaseUtilCTR,
     AppBaseUtilItem,
 } from './application'
+import { copy } from './utils'
 
 export const parseCommand = (
     input: string
@@ -36,7 +37,7 @@ export const argumentCheck = async (
     args: string[],
     checker: ArgumentCheck[]
 ): Promise<any[]> => {
-    let _args = [...args]
+    const _args = copy(args)
     for (const i of Array(checker.length).keys()) {
         const indexFixed = i + 1
         let _arg: any = _args[indexFixed]

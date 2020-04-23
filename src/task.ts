@@ -9,7 +9,7 @@ import {
     AppBaseUtilCTR,
     AppBaseUtilItem,
 } from './application'
-import { botMgr } from './main'
+import * as MAIN from './main'
 
 type TaskRecordInfo = {
     vk?: string
@@ -206,7 +206,7 @@ class Task extends AppBaseUtilItem {
     ) {
         super(appInfo, botName)
         this._event = new EventEmitter()
-        const _options = botMgr
+        const _options = MAIN.bots
             .get(botName)
             .getDefaultOptions<TaskOptions>(defaultTaskOptions, options)
         this._name = name
@@ -221,7 +221,7 @@ class Task extends AppBaseUtilItem {
     }
 
     private get _CTR(): TaskMgr {
-        return botMgr.get(this._botName).task
+        return MAIN.bots.get(this._botName).task
     }
     get event(): EventEmitter {
         return this._event
