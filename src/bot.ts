@@ -1,5 +1,11 @@
 import { EventEmitter } from 'events'
 
+import * as NodeTGBotAPI from 'node-telegram-bot-api'
+
+interface NodeTGBotAPIConstructor {
+    new (token: string, options?: NodeTGBotAPI.ConstructorOptions): NodeTGBotAPI
+}
+
 import { CTR, AnyCtor } from './ctr'
 import { Message, CallbackQuery } from './telegram'
 
@@ -8,9 +14,9 @@ export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
         super(BotUtils, 'Bot', 'name')
     }
 
-    add(name: string, owner?: number | string) {
-        const botUtils = super.add(name, owner)
-        botUtils.init()
+    add(name: string, options: BotOptions = {}) {
+        const botUtils = super.add(name, options)
+        botUtils._init()
         return botUtils
     }
 }
@@ -25,19 +31,28 @@ type Owner = {
 }
 
 interface BotUtilsConstructor {
-    new (
-        botName: string,
-        owner?: string | number,
-        expireDelay?: number,
-        errReply?: boolean
-    ): BotUtils
+    new (botName: string, options?: BotOptions): BotUtils
 }
+
+type BotOptions = {
+    owner?: string | number
+    expireDelay?: number
+    api?: {
+        token: string
+        options: NodeTGBotAPI.ConstructorOptions
+    }
+}
+
+const defaultBotOptions = {
+    owner: undefined,
+    expireDelay: Infinity,
+    api: {},
+} as Required<BotOptions>
 
 export class BotUtils {
     private _botName: string
     private _owner: Owner
     private _expireDelay: number
-    private _errReply: boolean
     private _event: EventEmitter
     private _applications: ApplicationMgr
     private _commands: CommandMgr
@@ -45,24 +60,27 @@ export class BotUtils {
     private _tasks: TaskMgr
     private _inlineKYBDUtils: InlineKYBDUtils
     private _groupUtils: GroupUtils
+    private _botAPI?: NodeTGBotAPI
+    private _APIToken?: string
+    private _APIOptions?: NodeTGBotAPI.ConstructorOptions
 
     constructor(...P: ConstructorParameters<BotUtilsConstructor>)
-    constructor(
-        botName: string,
-        owner?: string | number,
-        expireDelay?: number,
-        errReply?: boolean
-    ) {
+    constructor(botName: string, options?: BotOptions) {
         this._botName = botName
         this._owner = {} as Owner
-        this._expireDelay = expireDelay || Infinity
-        this._errReply = errReply || false
+        const _options = this.getDefaultOptions<BotOptions>(
+            defaultBotOptions,
+            options
+        )
+        this._expireDelay = _options.expireDelay
         this._event = new EventEmitter()
-        if (typeof owner === 'string') {
-            this._owner.username = owner
-        } else if (typeof owner === 'number') {
-            this._owner.id = owner
+        if (typeof _options.owner === 'string') {
+            this._owner.username = _options.owner
+        } else if (typeof _options.owner === 'number') {
+            this._owner.id = _options.owner
         }
+        this._APIToken = _options.api.token
+        this._APIOptions = _options.api.options
     }
 
     get name(): string {
@@ -73,12 +91,6 @@ export class BotUtils {
     }
     get expireDelay(): number {
         return this._expireDelay
-    }
-    get errReply(): boolean {
-        return this._errReply
-    }
-    set errReply(bool: boolean) {
-        this._errReply = bool
     }
     get event(): EventEmitter {
         return this._event
@@ -107,15 +119,32 @@ export class BotUtils {
     get inlineKYBD(): InlineKYBDUtils {
         return this._inlineKYBDUtils
     }
+    get api(): NodeTGBotAPI {
+        return this._botAPI
+    }
 
-    init() {
+    _init() {
         this._applications = new ApplicationMgr(this._botName)
         this._commands = new CommandMgr(this._botName)
         this._messageActions = new MessageActionMgr(this._botName)
-
         this._tasks = new TaskMgr(this._botName)
         this._inlineKYBDUtils = new InlineKYBDUtils(this._botName)
         this._groupUtils = new GroupUtils(this._botName)
+        this._botAPI = this._initAPI(this._APIToken, this._APIOptions)
+    }
+    private _initAPI(
+        token: string,
+        options?: NodeTGBotAPI.ConstructorOptions
+    ): NodeTGBotAPI {
+        const _ctor = MAIN.options.botAPIConstructor as NodeTGBotAPIConstructor
+        if (this._APIToken) {
+            try {
+                return (this._botAPI = new _ctor(token, options))
+            } catch (e) {
+                // e.code == 'MODULE_NOT_FOUND'
+            }
+        }
+        return undefined
     }
     getDefaultOptions<O>(
         defaultOptions: Required<O>,
@@ -154,17 +183,17 @@ export class BotUtils {
             }
             this._groupUtils.listener(message)
         } catch (err) {
-            this.onError(err)
+            this._onError(err)
         }
     }
     onCallbackQuery(callbackQuery: CallbackQuery): void {
         try {
             this._inlineKYBDUtils.checkCallbackQuery(callbackQuery)
         } catch (err) {
-            this.onError(err)
+            this._onError(err)
         }
     }
-    private onError(err: Error): void {
+    private _onError(err: Error): void {
         if (this._event.listenerCount('error') === 0) {
             throw err
         } else {
@@ -190,11 +219,11 @@ export class BotUtilCTR<T, C extends AnyCtor<T> = AnyCtor<T>> extends CTR<
     }
 
     protected get _bot(): BotUtils {
-        return botMgr.get(this._botName)
+        return MAIN.bots.get(this._botName)
     }
 }
 
-import { botMgr } from './main'
+import * as MAIN from './main'
 
 import { ApplicationMgr } from './application'
 import { CommandMgr } from './command'
