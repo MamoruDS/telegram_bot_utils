@@ -120,7 +120,7 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
     async checkMessage(message: Message): Promise<void> {
         const cmdInfo = parseCommand(message.text || message.caption)
         if (!cmdInfo.matched) return
-        if (cmdInfo.botMentioned && cmdInfo.botMentioned !== this._botName)
+        if (cmdInfo.botMentioned && cmdInfo.botMentioned !== this._bot.username)
             return
         const cmd = this.get(cmdInfo.args[0])
         if (
