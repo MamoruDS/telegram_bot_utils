@@ -7,7 +7,7 @@ export interface NodeTGBotAPIConstructor {
 }
 
 import { CTR, AnyCtor } from './ctr'
-import { copy } from './utils'
+import { copy, compObjCopy } from './utils'
 import { Message, CallbackQuery, User } from './telegram'
 
 export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
@@ -138,6 +138,7 @@ export class BotUtils {
     }
 
     async _init() {
+        if (typeof this._applications != 'undefined') return // init lock
         this._applications = new ApplicationMgr(this._botInfo.name)
         this._commands = new CommandMgr(this._botInfo.name)
         this._messageActions = new MessageActionMgr(this._botInfo.name)
@@ -145,6 +146,8 @@ export class BotUtils {
         this._inlineKYBDUtils = new InlineKYBDUtils(this._botInfo.name)
         this._groupUtils = new GroupUtils(this._botInfo.name)
         this._botAPI = await this._initAPI(this._APIToken, this._APIOptions)
+        this._addAPIListener()
+        this._event.emit('ready')
     }
     private async _initAPI(
         token: string,
@@ -178,6 +181,20 @@ export class BotUtils {
         this._botInfo.can_read_all_group_messages =
             bot.can_read_all_group_messages
         this._botInfo.supports_inline_queries = bot.supports_inline_queries
+    }
+    private _addAPIListener(): void {
+        this._botAPI.addListener('message', (message) => {
+            this.onMessage(compObjCopy<Message>(message))
+        })
+        this._botAPI.addListener('callback_query', (callbackQuery) => {
+            this.onCallbackQuery(compObjCopy<CallbackQuery>(callbackQuery))
+        })
+        this._botAPI.addListener('polling_error', (err) => {
+            this._onError(err)
+        })
+        this._botAPI.addListener('error', (err) => {
+            this._onError(err)
+        })
     }
     getDefaultOptions<O>(
         defaultOptions: Required<O>,
