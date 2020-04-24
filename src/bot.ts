@@ -2,7 +2,7 @@ import { EventEmitter } from 'events'
 
 import * as NodeTGBotAPI from 'node-telegram-bot-api'
 
-interface NodeTGBotAPIConstructor {
+export interface NodeTGBotAPIConstructor {
     new (token: string, options?: NodeTGBotAPI.ConstructorOptions): NodeTGBotAPI
 }
 

@@ -1,6 +1,6 @@
 {
-    "name": "telegram_bot_utils",
-    "version": "0.4.0",
+    "name": "telegram-bot-utils",
+    "version": "0.4.1-rc2",
     "description": "",
     "homepage": "https://github.com/MamoruDS/telegram_bot_utils",
     "author": "MamoruDS",
@@ -20,11 +20,11 @@
     },
     "devDependencies": {
         "@types/lodash": "^4.14.149",
-        "@types/node": "^13.7.2",
-        "@types/node-telegram-bot-api": "^0.40.2"
+        "@types/node": "^13.7.2"
     },
     "dependencies": {
         "lodash": "^4.17.15",
-        "lowdb": "^1.0.0"
+        "lowdb": "^1.0.0",
+        "@types/node-telegram-bot-api": "^0.40.2"
     }
 }
