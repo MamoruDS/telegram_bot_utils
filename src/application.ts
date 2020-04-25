@@ -121,23 +121,23 @@ export class ApplicationDataMan {
         }
     }
     get data(): object {
-        return this.application.getUserData(this.dataSpace)
+        return this.application._getUserData(this.dataSpace)
     }
     set data(data: object | null) {
-        this.application.setUserData(data, this.dataSpace)
+        this.application._setUserData(data, this.dataSpace)
     }
 
     get = (path?: string[]): any => {
-        const _data = this.application.getUserData(this.dataSpace)
+        const _data = this.application._getUserData(this.dataSpace)
         return _.get(_data, path)
     }
     set = (data: object, path?: string[]): void => {
         let _data = data
         if (typeof path !== 'undefined') {
-            _data = this.application.getUserData(this.dataSpace)
+            _data = this.application._getUserData(this.dataSpace)
             _data = _.set(_data, path, data)
         }
-        this.application.setUserData(_data, this.dataSpace)
+        this.application._setUserData(_data, this.dataSpace)
     }
     clean = (): void => {
         this.set(null)
@@ -174,7 +174,7 @@ export class ApplicationMgr extends BotUtilCTR<
     add(name: string, options: ApplicationOptions) {
         return super.add(name, options, this._botName)
     }
-    orderByPriority<O extends BasicOrderItem, CTRItemType>(
+    _orderByPriority<O extends BasicOrderItem, CTRItemType>(
         itemArray: O[],
         itemCTR: AppBaseUtilCTR<CTRItemType>
     ): O[] {
@@ -300,7 +300,7 @@ export class Application {
         return this._binds
     }
 
-    isValidForChat(chat: Chat): boolean {
+    _isValidForChat(chat: Chat): boolean {
         if (chat.type === 'channel') {
             return false
         }
@@ -315,7 +315,7 @@ export class Application {
         }
         return true
     }
-    getUserData(link: DataSpace = {}): object {
+    _getUserData(link: DataSpace = {}): object {
         const chatId = link.chat_id || PublicData
         const userId = link.user_id || PublicData
         return cache.getUserData(this._botName, this._name, {
@@ -323,7 +323,7 @@ export class Application {
             user_id: userId,
         })
     }
-    setUserData(data: object | null, link: DataSpace = {}) {
+    _setUserData(data: object | null, link: DataSpace = {}) {
         const chatId = link.chat_id || PublicData
         const userId = link.user_id || PublicData
         cache.setUserData(this._botName, this._name, data, {

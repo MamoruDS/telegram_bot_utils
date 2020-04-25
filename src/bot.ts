@@ -227,9 +227,9 @@ export class BotUtils {
     async onMessage(message: Message): Promise<void> {
         try {
             if (this.isMessageExpired(message)) return
-            const _l = await this._messageActions.checkMessage(message)
+            const _l = await this._messageActions._checkMessage(message)
             if (_l.passToCommand) {
-                await this._commands.checkMessage(message)
+                await this._commands._checkMessage(message)
             }
             this._groupUtils.listener(message)
         } catch (err) {
