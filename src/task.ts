@@ -39,8 +39,8 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
         execFn: CustomFn,
         interval: number,
         maxExecCounts: number,
-        options: TaskOptions,
-        applicationInfo: ApplicationInfo
+        options: TaskOptions = {},
+        applicationInfo: ApplicationInfo = {}
     ) {
         const _task = super.add(
             name,

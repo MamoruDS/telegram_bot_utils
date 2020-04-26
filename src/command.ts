@@ -107,7 +107,7 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
         commandString: string,
         execFunc: CustomFn,
         options: CommandOptions = {},
-        applicationInfo: ApplicationInfo
+        applicationInfo: ApplicationInfo = {}
     ) {
         return super.add(
             commandString,

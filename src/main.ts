@@ -1,4 +1,4 @@
-import { BotMgr, NodeTGBotAPIConstructor } from './bot'
+import { BotMgr, BotUtils, NodeTGBotAPIConstructor } from './bot'
 
 const _bots = new BotMgr() as BotMgr
 
@@ -10,4 +10,4 @@ const _options = {
     maxInlineButtonWidth: number
 }
 
-export { _bots as bots, _options as options }
+export { _bots as bots, _options as options, BotUtils }

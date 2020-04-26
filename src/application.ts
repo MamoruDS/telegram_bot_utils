@@ -174,10 +174,10 @@ export class ApplicationMgr extends BotUtilCTR<
     add(name: string, options: ApplicationOptions) {
         return super.add(name, options, this._botName)
     }
-    _orderByPriority<O extends BasicOrderItem, CTRItemType>(
-        itemArray: O[],
-        itemCTR: AppBaseUtilCTR<CTRItemType>
-    ): O[] {
+    _orderByPriority<
+        O extends BasicOrderItem,
+        CTRItemType extends AppBaseUtilItem
+    >(itemArray: O[], itemCTR: AppBaseUtilCTR<CTRItemType>): O[] {
         const that = this
         return _.orderBy(
             itemArray,
@@ -358,7 +358,7 @@ const DefaultApplicationInfo: Required<ApplicationInfo> = {
 }
 
 export class AppBaseUtilCTR<
-    T,
+    T extends AppBaseUtilItem,
     C extends AnyCtor<T> = AnyCtor<T>
 > extends BotUtilCTR<T, C> {}
 

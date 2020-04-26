@@ -36,7 +36,7 @@ export class MessageActionMgr extends AppBaseUtilCTR<
         name: string,
         execFn: CustomFn,
         options: MessageActionOptions = {},
-        applicationInfo: ApplicationInfo
+        applicationInfo: ApplicationInfo = {}
     ) {
         this._records.import(name)
         return super.add(name, execFn, options, applicationInfo, this._botName)
