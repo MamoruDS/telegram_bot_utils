@@ -7,6 +7,7 @@ import {
     AppBaseUtilItem,
 } from './application'
 import { RecordMan, RecordMgr } from './record'
+import { assignDefault } from './utils'
 
 type MessageListenerInfo = {
     chat_id: number
@@ -191,12 +192,7 @@ class MessageAction extends AppBaseUtilItem {
     ) {
         super(appInfo, botName)
         this._name = name
-        const _options = MAIN.bots
-            .get(this._botName)
-            .getDefaultOptions<MessageActionOptions>(
-                defaultMessageActionOptions,
-                options
-            )
+        const _options = assignDefault(defaultMessageActionOptions, options)
         this._execFunction = execFn
         this._maxExecCounts = _options.max_exec_counts
         this._passToOtherAction = _options.pass_to_other_action

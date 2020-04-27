@@ -6,7 +6,7 @@ import {
     AppBaseUtilCTR,
     AppBaseUtilItem,
 } from './application'
-import { copy } from './utils'
+import { copy, assignDefault } from './utils'
 
 export const parseCommand = (
     input: string
@@ -226,9 +226,7 @@ class Command extends AppBaseUtilItem {
         botName: string
     ) {
         super(appInfo, botName)
-        const _options = MAIN.bots
-            .get(this._botName)
-            .getDefaultOptions<CommandOptions>(defaultCommandOptions, options)
+        const _options = assignDefault(defaultCommandOptions, options)
         this._command = commandString
         this._execFunction = execFunc
         this._argumentCheck = _options.argument_check

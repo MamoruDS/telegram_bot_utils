@@ -5,6 +5,7 @@ import { BotUtils, BotUtilCTR } from './bot'
 import * as MAIN from './main'
 import * as cache from './cache'
 import { Chat, Message } from './telegram'
+import { assignDefault } from './utils'
 
 export type ApplicationChatBindSTO = {
     chat_id: number
@@ -246,12 +247,7 @@ export class Application {
         const options = P[1]
         const botName = P[2]
         this._botName = botName
-        const _options = MAIN.bots
-            .get(this._botName)
-            .getDefaultOptions<ApplicationOptions>(
-                defaultApplicationOptions,
-                options
-            )
+        const _options = assignDefault(defaultApplicationOptions, options)
         if (_options.priority === -Infinity) {
             try {
                 _options.priority =
@@ -360,7 +356,7 @@ export type ApplicationInfo = {
     sub_priority?: number
 }
 
-const DefaultApplicationInfo: Required<ApplicationInfo> = {
+const defaultApplicationInfo: Required<ApplicationInfo> = {
     application_name: DefaultApplication,
     data_space: {
         bind_with_chat: undefined,
@@ -380,10 +376,7 @@ export class AppBaseUtilItem {
 
     constructor(appInfo: ApplicationInfo = {}, botName: string) {
         this._botName = botName
-        this._applicationInfo = this._bot.getDefaultOptions<ApplicationInfo>(
-            DefaultApplicationInfo,
-            appInfo
-        )
+        this._applicationInfo = assignDefault(defaultApplicationInfo, appInfo)
     }
 
     protected get _bot(): BotUtils {

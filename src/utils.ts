@@ -118,3 +118,66 @@ export const compObjCopy = <T extends object>(source: object): T => {
     }
     return _t
 }
+
+type Optional<T extends object> = {
+    [key in keyof T]?: T[key] extends object ? Optional<T[key]> : T[key]
+}
+
+export const assignDefault = <T extends object>(
+    defaultOptions: Required<T>,
+    inputOptions: Optional<T>
+): Required<T> => {
+    if (
+        typeof inputOptions !== 'object' ||
+        inputOptions === null ||
+        Array.isArray(inputOptions)
+    ) {
+        throw new TypeError('Input options expect an object to be entered')
+    }
+    const _options = copy(defaultOptions)
+    assign(_options, inputOptions)
+    return _options
+}
+
+const assign = <T extends object>(
+    target: Required<T>,
+    input: Optional<T>,
+    assignExistOnly?: boolean
+): void => {
+    for (const key of Object.keys(target)) {
+        const _val = input[key]
+        if (typeof _val != 'undefined') {
+            if (_val == null) {
+                target[key] = null
+                continue
+            }
+            if (Array.isArray(_val)) {
+                for (const i in target[key]) {
+                    const __val = _val[i]
+                    if (typeof __val == 'undefined') continue
+                    if (
+                        typeof target[key][i] == 'object' &&
+                        !Array.isArray(target) &&
+                        target != null
+                    ) {
+                        assign(target[key][i], _val[i])
+                    } else {
+                        target[key][i] = __val
+                    }
+                }
+                continue
+            }
+            if (typeof _val == 'object' && _val != {}) {
+                assign(target[key], _val)
+                continue
+            }
+            target[key] = _val
+            continue
+        }
+    }
+    for (const key of Object.keys(input)) {
+        if (typeof target[key] == 'undefined' && !assignExistOnly) {
+            target[key] = copy(input[key])
+        }
+    }
+}

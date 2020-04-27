@@ -7,7 +7,7 @@ export interface NodeTGBotAPIConstructor {
 }
 
 import { CTR, AnyCtor } from './ctr'
-import { copy, compObjCopy } from './utils'
+import { copy, compObjCopy, assignDefault } from './utils'
 import { Message, CallbackQuery, User } from './telegram'
 
 export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
@@ -79,10 +79,7 @@ export class BotUtils {
     constructor(botName: string, options?: BotOptions) {
         this._botInfo = { name: botName, username: botName } as BotInfo
         this._owner = {} as Owner
-        const _options = this.getDefaultOptions<BotOptions>(
-            defaultBotOptions,
-            options
-        )
+        const _options = assignDefault(defaultBotOptions, options)
         this._expireDelay = _options.expireDelay
         this._event = new EventEmitter()
         if (typeof _options.owner === 'string') {
@@ -183,38 +180,20 @@ export class BotUtils {
         this._botInfo.supports_inline_queries = bot.supports_inline_queries
     }
     private _addAPIListener(): void {
-        this._botAPI.addListener('message', (message) => {
-            this.onMessage(compObjCopy<Message>(message))
-        })
-        this._botAPI.addListener('callback_query', (callbackQuery) => {
-            this.onCallbackQuery(compObjCopy<CallbackQuery>(callbackQuery))
-        })
-        this._botAPI.addListener('polling_error', (err) => {
-            this._onError(err)
-        })
-        this._botAPI.addListener('error', (err) => {
-            this._onError(err)
-        })
-    }
-    getDefaultOptions<O>(
-        defaultOptions: Required<O>,
-        inputOptions: O = {} as O
-    ): Required<O> {
-        const _options = copy(defaultOptions) as Required<O>
-        if (
-            typeof inputOptions !== 'object' ||
-            inputOptions === null ||
-            Array.isArray(inputOptions)
-        ) {
-            throw new TypeError('Input options expect an object to be entered')
+        if (typeof this._botAPI != 'undefined') {
+            this._botAPI.addListener('message', (message) => {
+                this.onMessage(compObjCopy<Message>(message))
+            })
+            this._botAPI.addListener('callback_query', (callbackQuery) => {
+                this.onCallbackQuery(compObjCopy<CallbackQuery>(callbackQuery))
+            })
+            this._botAPI.addListener('polling_error', (err) => {
+                this._onError(err)
+            })
+            this._botAPI.addListener('error', (err) => {
+                this._onError(err)
+            })
         }
-        for (const opt in _options) {
-            _options[opt] =
-                inputOptions[opt] !== undefined
-                    ? inputOptions[opt]
-                    : _options[opt]
-        }
-        return _options
     }
     private isMessageExpired(message: Message): boolean {
         const _delay = Math.floor(Date.now() / 1000) - message.date

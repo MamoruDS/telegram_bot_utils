@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events'
 import * as _ from 'lodash'
 
-import * as utils from './utils'
+import { genRandom, wait, assignDefault } from './utils'
 import { RecordMgr, RecordMan } from './record'
 import {
     ApplicationDataMan,
@@ -128,7 +128,7 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
     _next(recId: string, timeout: number = 0): void {
         const record = this._records.get(recId, false, false)
         if (record) {
-            const key = utils.genRandom(4)
+            const key = genRandom(4)
             record.info({ vk: key })
             setTimeout(() => {
                 this._check(record.id, key)
@@ -206,9 +206,7 @@ class Task extends AppBaseUtilItem {
     ) {
         super(appInfo, botName)
         this._event = new EventEmitter()
-        const _options = MAIN.bots
-            .get(botName)
-            .getDefaultOptions<TaskOptions>(defaultTaskOptions, options)
+        const _options = assignDefault(defaultTaskOptions, options)
         this._name = name
         this._execFunction = execFn
         this._interval = interval
@@ -285,7 +283,7 @@ class Task extends AppBaseUtilItem {
             record.info({ next: record.info().next += this._interval })
             record.info({ executed: record.info().executed + 1 })
             this._event.emit('execute', recId)
-            await utils.wait(5)
+            await wait(5)
             this._CTR._next(record.id)
         }
         return
