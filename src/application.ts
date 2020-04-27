@@ -129,11 +129,15 @@ export class ApplicationDataMan {
 
     get = (path?: string[]): any => {
         const _data = this.application._getUserData(this.dataSpace)
-        return _.get(_data, path)
+        if (typeof path != 'undefined' && Array.isArray(path)) {
+            return _.get(_data, path)
+        } else {
+            return _data
+        }
     }
     set = (data: object, path?: string[]): void => {
         let _data = data
-        if (typeof path !== 'undefined') {
+        if (typeof path != 'undefined' && Array.isArray(path)) {
             _data = this.application._getUserData(this.dataSpace)
             _data = _.set(_data, path, data)
         }
