@@ -315,21 +315,29 @@ export class Application {
         }
         return true
     }
-    _getUserData(link: DataSpace = {}): object {
-        const chatId = link.chat_id || PublicData
-        const userId = link.user_id || PublicData
+    _getUserData(link: DataSpace = {}, ARB?: true): object {
+        const chatId = this._calChatId(link.chat_id, ARB)
+        const userId = this._calUserId(link.user_id, ARB)
         return cache.getUserData(this._botName, this._name, {
             chat_id: chatId,
             user_id: userId,
         })
     }
-    _setUserData(data: object | null, link: DataSpace = {}) {
-        const chatId = link.chat_id || PublicData
-        const userId = link.user_id || PublicData
+    _setUserData(data: object | null, link: DataSpace = {}, ARB?: true) {
+        const chatId = this._calChatId(link.chat_id, ARB)
+        const userId = this._calUserId(link.user_id, ARB)
         cache.setUserData(this._botName, this._name, data, {
             chat_id: chatId,
             user_id: userId,
         })
+    }
+    _calUserId(id?: number, ARB?: true): number {
+        const _id = id || PubId
+        return ARB ? _id : this._dataBindWithUser ? _id : PubId
+    }
+    _calChatId(id?: number, ARB?: true): number {
+        const _id = id || PubId
+        return ARB ? _id : this._dataBindWithChat ? _id : PubId
     }
     dataMan(dataSpace: DataSpace): ApplicationDataMan {
         return new ApplicationDataMan(this._botName, this._name, dataSpace)
@@ -337,7 +345,7 @@ export class Application {
 }
 
 const DefaultApplication = '_global'
-const PublicData = 0
+const PubId = 0
 
 export type ApplicationInfo = {
     application_name?: string

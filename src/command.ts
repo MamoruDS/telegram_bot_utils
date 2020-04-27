@@ -122,14 +122,14 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
         if (!cmdInfo.matched) return
         if (cmdInfo.botMentioned && cmdInfo.botMentioned !== this._bot.username)
             return
-        const cmd = this.get(cmdInfo.args[0])
+        const cmd = this.get(cmdInfo.args[0], false, false)
+        if (typeof cmd === 'undefined') return
         if (
             !this._bot.application
                 .get(cmd.appInfo.application_name)
                 ._isValidForChat(message.chat)
         )
             return
-        if (typeof cmd === 'undefined') return
         if (
             !MAIN.bots
                 .get(this._botName)
