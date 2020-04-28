@@ -2,13 +2,13 @@ import { EventEmitter } from 'events'
 
 import * as NodeTGBotAPI from 'node-telegram-bot-api'
 
-interface NodeTGBotAPIConstructor {
+export interface NodeTGBotAPIConstructor {
     new (token: string, options?: NodeTGBotAPI.ConstructorOptions): NodeTGBotAPI
 }
 
 import { CTR, AnyCtor } from './ctr'
-import { copy } from './utils'
-import { Message, CallbackQuery } from './telegram'
+import { copy, compObjCopy, assignDefault } from './utils'
+import { Message, CallbackQuery, User } from './telegram'
 
 export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
     constructor() {
@@ -35,12 +35,22 @@ interface BotUtilsConstructor {
     new (botName: string, options?: BotOptions): BotUtils
 }
 
+type BotInfo = {
+    firstname: string
+    username: string
+    id: number
+    name: string // use in sto
+    can_join_groups: boolean
+    can_read_all_group_messages: boolean
+    supports_inline_queries: boolean
+}
+
 type BotOptions = {
     owner?: string | number
     expireDelay?: number
     api?: {
         token: string
-        options: NodeTGBotAPI.ConstructorOptions
+        options?: NodeTGBotAPI.ConstructorOptions
     }
 }
 
@@ -51,7 +61,7 @@ const defaultBotOptions = {
 } as Required<BotOptions>
 
 export class BotUtils {
-    private _botName: string
+    private _botInfo: BotInfo
     private _owner: Owner
     private _expireDelay: number
     private _event: EventEmitter
@@ -67,12 +77,9 @@ export class BotUtils {
 
     constructor(...P: ConstructorParameters<BotUtilsConstructor>)
     constructor(botName: string, options?: BotOptions) {
-        this._botName = botName
+        this._botInfo = { name: botName, username: botName } as BotInfo
         this._owner = {} as Owner
-        const _options = this.getDefaultOptions<BotOptions>(
-            defaultBotOptions,
-            options
-        )
+        const _options = assignDefault(defaultBotOptions, options)
         this._expireDelay = _options.expireDelay
         this._event = new EventEmitter()
         if (typeof _options.owner === 'string') {
@@ -85,7 +92,10 @@ export class BotUtils {
     }
 
     get name(): string {
-        return this._botName
+        return this._botInfo.name
+    }
+    get username(): string {
+        return this._botInfo.username
     }
     get owner(): Owner {
         return this._owner
@@ -124,48 +134,66 @@ export class BotUtils {
         return this._botAPI
     }
 
-    _init() {
-        this._applications = new ApplicationMgr(this._botName)
-        this._commands = new CommandMgr(this._botName)
-        this._messageActions = new MessageActionMgr(this._botName)
-        this._tasks = new TaskMgr(this._botName)
-        this._inlineKYBDUtils = new InlineKYBDUtils(this._botName)
-        this._groupUtils = new GroupUtils(this._botName)
-        this._botAPI = this._initAPI(this._APIToken, this._APIOptions)
+    async _init() {
+        if (typeof this._applications != 'undefined') return // init lock
+        this._applications = new ApplicationMgr(this._botInfo.name)
+        this._commands = new CommandMgr(this._botInfo.name)
+        this._messageActions = new MessageActionMgr(this._botInfo.name)
+        this._tasks = new TaskMgr(this._botInfo.name)
+        this._inlineKYBDUtils = new InlineKYBDUtils(this._botInfo.name)
+        this._groupUtils = new GroupUtils(this._botInfo.name)
+        this._botAPI = await this._initAPI(this._APIToken, this._APIOptions)
+        this._addAPIListener()
+        this._event.emit('ready')
     }
-    private _initAPI(
+    private async _initAPI(
         token: string,
         options?: NodeTGBotAPI.ConstructorOptions
-    ): NodeTGBotAPI {
+    ): Promise<NodeTGBotAPI> {
         const _ctor = MAIN.options.botAPIConstructor as NodeTGBotAPIConstructor
         if (this._APIToken) {
-            try {
-                return (this._botAPI = new _ctor(token, options))
-            } catch (e) {
-                // e.code == 'MODULE_NOT_FOUND'
+            if (typeof _ctor == 'undefined') {
+                console.warn(
+                    'API Module not found: \n' +
+                        'Got API token in Bot constructor, but no API module exist. All built-in functions need API to work are disabled.'
+                )
+            } else {
+                try {
+                    const _api = new _ctor(token, options)
+                    const _bot = await _api.getMe()
+                    this._updateBotProfile(_bot)
+                    return _api
+                } catch (e) {
+                    // e.code == 'MODULE_NOT_FOUND'
+                }
             }
         }
         return undefined
     }
-    getDefaultOptions<O>(
-        defaultOptions: Required<O>,
-        inputOptions: O = {} as O
-    ): Required<O> {
-        const _options = copy(defaultOptions) as Required<O>
-        if (
-            typeof inputOptions !== 'object' ||
-            inputOptions === null ||
-            Array.isArray(inputOptions)
-        ) {
-            throw new TypeError('Input options expect an object to be entered')
+    private _updateBotProfile(bot: User): void {
+        this._botInfo.id = bot.id
+        this._botInfo.firstname = bot.first_name
+        this._botInfo.username = bot.username
+        this._botInfo.can_join_groups = bot.can_join_groups
+        this._botInfo.can_read_all_group_messages =
+            bot.can_read_all_group_messages
+        this._botInfo.supports_inline_queries = bot.supports_inline_queries
+    }
+    private _addAPIListener(): void {
+        if (typeof this._botAPI != 'undefined') {
+            this._botAPI.addListener('message', (message) => {
+                this.onMessage(compObjCopy<Message>(message))
+            })
+            this._botAPI.addListener('callback_query', (callbackQuery) => {
+                this.onCallbackQuery(compObjCopy<CallbackQuery>(callbackQuery))
+            })
+            this._botAPI.addListener('polling_error', (err) => {
+                this._onError(err)
+            })
+            this._botAPI.addListener('error', (err) => {
+                this._onError(err)
+            })
         }
-        for (const opt in _options) {
-            _options[opt] =
-                inputOptions[opt] !== undefined
-                    ? inputOptions[opt]
-                    : _options[opt]
-        }
-        return _options
     }
     private isMessageExpired(message: Message): boolean {
         const _delay = Math.floor(Date.now() / 1000) - message.date
@@ -178,9 +206,9 @@ export class BotUtils {
     async onMessage(message: Message): Promise<void> {
         try {
             if (this.isMessageExpired(message)) return
-            const _l = await this._messageActions.checkMessage(message)
+            const _l = await this._messageActions._checkMessage(message)
             if (_l.passToCommand) {
-                await this._commands.checkMessage(message)
+                await this._commands._checkMessage(message)
             }
             this._groupUtils.listener(message)
         } catch (err) {

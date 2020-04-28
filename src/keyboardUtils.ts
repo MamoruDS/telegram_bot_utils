@@ -1,5 +1,5 @@
 import * as MAIN from './main'
-import * as utils from './utils'
+import { genRandom, assignDefault } from './utils'
 import { CallbackQuery, InlineKeyboardButton } from './telegram'
 import {
     ApplicationDataMan,
@@ -230,7 +230,7 @@ export class InlineKYBDUtils extends AppBaseUtilCTR<
                 continue
             }
             if (btn.callback_action) {
-                const KeyId = utils.genRandom(6).toUpperCase()
+                const KeyId = genRandom(6).toUpperCase()
                 _buttons[KeyId] = {
                     action_name: btn.callback_action,
                     data:
@@ -334,12 +334,7 @@ class InlineKYBDAciton extends AppBaseUtilItem {
         super(appInfo, botName)
         this._name = name
         this._execFunction = execFn
-        const _options = MAIN.bots
-            .get(this._botName)
-            .getDefaultOptions<InlineKYBDOptions>(
-                defaultInlineKYBDOptions,
-                options
-            )
+        const _options = assignDefault(defaultInlineKYBDOptions, options)
     }
 
     get name(): string {

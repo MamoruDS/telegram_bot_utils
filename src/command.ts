@@ -6,7 +6,7 @@ import {
     AppBaseUtilCTR,
     AppBaseUtilItem,
 } from './application'
-import { copy } from './utils'
+import { copy, assignDefault } from './utils'
 
 export const parseCommand = (
     input: string
@@ -107,7 +107,7 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
         commandString: string,
         execFunc: CustomFn,
         options: CommandOptions = {},
-        applicationInfo: ApplicationInfo
+        applicationInfo: ApplicationInfo = {}
     ) {
         return super.add(
             commandString,
@@ -117,32 +117,32 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
             this._botName
         )
     }
-    async checkMessage(message: Message): Promise<void> {
+    async _checkMessage(message: Message): Promise<void> {
         const cmdInfo = parseCommand(message.text || message.caption)
         if (!cmdInfo.matched) return
-        if (cmdInfo.botMentioned && cmdInfo.botMentioned !== this._botName)
+        if (cmdInfo.botMentioned && cmdInfo.botMentioned !== this._bot.username)
             return
-        const cmd = this.get(cmdInfo.args[0])
+        const cmd = this.get(cmdInfo.args[0], false, false)
+        if (typeof cmd === 'undefined') return
         if (
             !this._bot.application
                 .get(cmd.appInfo.application_name)
-                .isValidForChat(message.chat)
+                ._isValidForChat(message.chat)
         )
             return
-        if (typeof cmd === 'undefined') return
         if (
             !MAIN.bots
                 .get(this._botName)
                 .application.get(cmd.appInfo.application_name)
-                .isValidForChat(message.chat)
+                ._isValidForChat(message.chat)
         ) {
             return
         }
         const dataMan = cmd.dataMan(message)
-        if (!cmd.messageFilter(message)) return
+        if (!cmd._messageFilter(message)) return
         try {
             const _args = await argumentCheck(cmdInfo.args, cmd.check)
-            cmd.exec({
+            cmd._exec({
                 arguments: _args,
                 message: message,
                 data: {
@@ -152,7 +152,7 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
                 },
             })
         } catch (e) {
-            cmd.argumentErrorHandle(message, e)
+            cmd._argumentErrorHandle(message, e)
         }
         return
     }
@@ -226,9 +226,7 @@ class Command extends AppBaseUtilItem {
         botName: string
     ) {
         super(appInfo, botName)
-        const _options = MAIN.bots
-            .get(this._botName)
-            .getDefaultOptions<CommandOptions>(defaultCommandOptions, options)
+        const _options = assignDefault(defaultCommandOptions, options)
         this._command = commandString
         this._execFunction = execFunc
         this._argumentCheck = _options.argument_check
@@ -238,7 +236,7 @@ class Command extends AppBaseUtilItem {
         this._description = _options.description
     }
 
-    private get CTR(): CommandMgr {
+    private get _CTR(): CommandMgr {
         return MAIN.bots.get(this._botName).command
     }
     get cmd(): string {
@@ -254,7 +252,7 @@ class Command extends AppBaseUtilItem {
         return this._description
     }
 
-    async messageFilter(message: Message): Promise<boolean> {
+    async _messageFilter(message: Message): Promise<boolean> {
         if (this._filter === 'public') {
             return true
         }
@@ -274,10 +272,10 @@ class Command extends AppBaseUtilItem {
         }
         return false
     }
-    exec(...args: Parameters<CustomFn>): ReturnType<CustomFn> {
+    _exec(...args: Parameters<CustomFn>): ReturnType<CustomFn> {
         return this._execFunction(...args)
     }
-    argumentErrorHandle(message: Message, err: Error) {
+    _argumentErrorHandle(message: Message, err: Error) {
         this._argumentErrorFunction(message, err)
     }
 }

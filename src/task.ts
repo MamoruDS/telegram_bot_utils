@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events'
 import * as _ from 'lodash'
 
-import * as utils from './utils'
+import { genRandom, wait, assignDefault } from './utils'
 import { RecordMgr, RecordMan } from './record'
 import {
     ApplicationDataMan,
@@ -26,7 +26,7 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
         super(Task, 'Task', 'name', botName)
         this._records = new RecordMgr<TaskRecordInfo>(this._botName, 'BotTask')
         this._records.event.addListener('import', (recId) => {
-            this.check(recId)
+            this._check(recId)
         })
     }
 
@@ -39,8 +39,8 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
         execFn: CustomFn,
         interval: number,
         maxExecCounts: number,
-        options: TaskOptions,
-        applicationInfo: ApplicationInfo
+        options: TaskOptions = {},
+        applicationInfo: ApplicationInfo = {}
     ) {
         const _task = super.add(
             name,
@@ -70,11 +70,11 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
             next: _next,
             executed: 0,
         })
-        this.next(record.id)
+        this._next(record.id)
         return record.id
     }
 
-    check(recId: string, verifyKey?: string): void {
+    _check(recId: string, verifyKey?: string): void {
         if (!this._records.isCurSessionRec(recId)) return
         const record = this._records.get(recId, true, false)
         if (typeof verifyKey !== 'undefined' && verifyKey !== record.info().vk)
@@ -109,35 +109,35 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
             }
             switch (task.importPolicy.split('-')[0]) {
                 case 'curr':
-                    task.exec(record.id)
+                    task._exec(record.id)
                     break
                 case 'next':
                     record.info({
                         next: record.info().next + task.interval,
                     })
-                    this.next(record.id)
+                    this._next(record.id)
                     break
             }
         } else if (dTs > 0) {
-            task.exec(record.id)
+            task._exec(record.id)
         } else {
             record.locked = false
-            this.next(record.id, Math.abs(dTs))
+            this._next(record.id, Math.abs(dTs))
         }
     }
-    next(recId: string, timeout: number = 0): void {
+    _next(recId: string, timeout: number = 0): void {
         const record = this._records.get(recId, false, false)
         if (record) {
-            const key = utils.genRandom(4)
+            const key = genRandom(4)
             record.info({ vk: key })
             setTimeout(() => {
-                this.check(record.id, key)
+                this._check(record.id, key)
             }, timeout)
         }
     }
     forceExec(recId: string): void {
         const record = this._records.get(recId, true, false)
-        this.get(record.recordOf).exec(record.id)
+        this.get(record.recordOf)._exec(record.id)
     }
 }
 
@@ -206,9 +206,7 @@ class Task extends AppBaseUtilItem {
     ) {
         super(appInfo, botName)
         this._event = new EventEmitter()
-        const _options = MAIN.bots
-            .get(botName)
-            .getDefaultOptions<TaskOptions>(defaultTaskOptions, options)
+        const _options = assignDefault(defaultTaskOptions, options)
         this._name = name
         this._execFunction = execFn
         this._interval = interval
@@ -217,7 +215,7 @@ class Task extends AppBaseUtilItem {
         this._importPolicy = _options.import_policy
         this._timeout = _options.timeout
         this._timeoutFunction = _options.timeout_function
-        this.init()
+        this._init()
     }
 
     private get _CTR(): TaskMgr {
@@ -245,7 +243,7 @@ class Task extends AppBaseUtilItem {
         return this._timeout
     }
 
-    init() {
+    _init() {
         this._event.addListener(
             'timeout',
             async (recId: string, imported: boolean) => {
@@ -261,7 +259,7 @@ class Task extends AppBaseUtilItem {
                         }),
                     },
                 })
-                this._CTR.check(record.id)
+                this._CTR._check(record.id)
             }
         )
         this._event.addListener('execute', (recId) => {
@@ -279,14 +277,14 @@ class Task extends AppBaseUtilItem {
             })
         })
     }
-    async exec(recId: string): Promise<void> {
+    async _exec(recId: string): Promise<void> {
         const record = this._CTR.record.get(recId, false, false)
         if (record) {
             record.info({ next: record.info().next += this._interval })
             record.info({ executed: record.info().executed + 1 })
             this._event.emit('execute', recId)
-            await utils.wait(5)
-            this._CTR.next(record.id)
+            await wait(5)
+            this._CTR._next(record.id)
         }
         return
     }

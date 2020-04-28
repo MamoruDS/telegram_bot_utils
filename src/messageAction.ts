@@ -7,6 +7,7 @@ import {
     AppBaseUtilItem,
 } from './application'
 import { RecordMan, RecordMgr } from './record'
+import { assignDefault } from './utils'
 
 type MessageListenerInfo = {
     chat_id: number
@@ -36,7 +37,7 @@ export class MessageActionMgr extends AppBaseUtilCTR<
         name: string,
         execFn: CustomFn,
         options: MessageActionOptions = {},
-        applicationInfo: ApplicationInfo
+        applicationInfo: ApplicationInfo = {}
     ) {
         this._records.import(name)
         return super.add(name, execFn, options, applicationInfo, this._botName)
@@ -48,11 +49,11 @@ export class MessageActionMgr extends AppBaseUtilCTR<
         })
         if (_recs.length !== 0) {
             const action = this.get(actionName)
-            await action.duplicateExec(chatId, userId, _recs[0].id)
+            await action._duplicateExec(chatId, userId, _recs[0].id)
             return
         }
         const action = this.get(actionName)
-        const res = await action.initExec(chatId, userId)
+        const res = await action._initExec(chatId, userId)
         this._records.add(actionName, {
             chat_id: chatId,
             user_id: userId,
@@ -60,7 +61,7 @@ export class MessageActionMgr extends AppBaseUtilCTR<
         })
         return res
     }
-    async checkMessage(
+    async _checkMessage(
         message: Message
     ): Promise<{
         passToCommand: boolean
@@ -86,7 +87,7 @@ export class MessageActionMgr extends AppBaseUtilCTR<
                 recId: rec.id,
             } as OrderedAction
         })
-        const _orderedActions = this._bot.application.orderByPriority<
+        const _orderedActions = this._bot.application._orderByPriority<
             OrderedAction,
             MessageAction
         >(_actions, this)
@@ -95,11 +96,11 @@ export class MessageActionMgr extends AppBaseUtilCTR<
             if (
                 !this._bot.application
                     .get(_action.appInfo.application_name)
-                    .isValidForChat(message.chat)
+                    ._isValidForChat(message.chat)
             )
                 continue
             const _recId: string = orderedAction.recId
-            const _res = await _action.exec(message, _recId)
+            const _res = await _action._exec(message, _recId)
             if (_res.removeListener) {
                 const _rec = this._records.get(_recId)
                 _action.expireExec(
@@ -191,12 +192,7 @@ class MessageAction extends AppBaseUtilItem {
     ) {
         super(appInfo, botName)
         this._name = name
-        const _options = MAIN.bots
-            .get(this._botName)
-            .getDefaultOptions<MessageActionOptions>(
-                defaultMessageActionOptions,
-                options
-            )
+        const _options = assignDefault(defaultMessageActionOptions, options)
         this._execFunction = execFn
         this._maxExecCounts = _options.max_exec_counts
         this._passToOtherAction = _options.pass_to_other_action
@@ -216,7 +212,7 @@ class MessageAction extends AppBaseUtilItem {
         return this._bot.messageAction
     }
 
-    async exec(
+    async _exec(
         message: Message,
         recordId: string
     ): Promise<{
@@ -244,7 +240,7 @@ class MessageAction extends AppBaseUtilItem {
         return res
     }
 
-    async initExec(chatId: number, userId: number): Promise<any> {
+    async _initExec(chatId: number, userId: number): Promise<any> {
         return this._initFunction({
             data: {
                 chat_id: chatId,
@@ -253,7 +249,7 @@ class MessageAction extends AppBaseUtilItem {
             },
         })
     }
-    async duplicateExec(
+    async _duplicateExec(
         chatId: number,
         userId: number,
         recId: string

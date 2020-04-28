@@ -5,6 +5,7 @@ import { BotUtils, BotUtilCTR } from './bot'
 import * as MAIN from './main'
 import * as cache from './cache'
 import { Chat, Message } from './telegram'
+import { assignDefault } from './utils'
 
 export type ApplicationChatBindSTO = {
     chat_id: number
@@ -121,23 +122,27 @@ export class ApplicationDataMan {
         }
     }
     get data(): object {
-        return this.application.getUserData(this.dataSpace)
+        return this.application._getUserData(this.dataSpace)
     }
     set data(data: object | null) {
-        this.application.setUserData(data, this.dataSpace)
+        this.application._setUserData(data, this.dataSpace)
     }
 
     get = (path?: string[]): any => {
-        const _data = this.application.getUserData(this.dataSpace)
-        return _.get(_data, path)
+        const _data = this.application._getUserData(this.dataSpace)
+        if (typeof path != 'undefined' && Array.isArray(path)) {
+            return _.get(_data, path)
+        } else {
+            return _data
+        }
     }
     set = (data: object, path?: string[]): void => {
         let _data = data
-        if (typeof path !== 'undefined') {
-            _data = this.application.getUserData(this.dataSpace)
+        if (typeof path != 'undefined' && Array.isArray(path)) {
+            _data = this.application._getUserData(this.dataSpace)
             _data = _.set(_data, path, data)
         }
-        this.application.setUserData(_data, this.dataSpace)
+        this.application._setUserData(_data, this.dataSpace)
     }
     clean = (): void => {
         this.set(null)
@@ -174,10 +179,10 @@ export class ApplicationMgr extends BotUtilCTR<
     add(name: string, options: ApplicationOptions) {
         return super.add(name, options, this._botName)
     }
-    orderByPriority<O extends BasicOrderItem, CTRItemType>(
-        itemArray: O[],
-        itemCTR: AppBaseUtilCTR<CTRItemType>
-    ): O[] {
+    _orderByPriority<
+        O extends BasicOrderItem,
+        CTRItemType extends AppBaseUtilItem
+    >(itemArray: O[], itemCTR: AppBaseUtilCTR<CTRItemType>): O[] {
         const that = this
         return _.orderBy(
             itemArray,
@@ -242,12 +247,7 @@ export class Application {
         const options = P[1]
         const botName = P[2]
         this._botName = botName
-        const _options = MAIN.bots
-            .get(this._botName)
-            .getDefaultOptions<ApplicationOptions>(
-                defaultApplicationOptions,
-                options
-            )
+        const _options = assignDefault(defaultApplicationOptions, options)
         if (_options.priority === -Infinity) {
             try {
                 _options.priority =
@@ -300,7 +300,7 @@ export class Application {
         return this._binds
     }
 
-    isValidForChat(chat: Chat): boolean {
+    _isValidForChat(chat: Chat): boolean {
         if (chat.type === 'channel') {
             return false
         }
@@ -315,21 +315,29 @@ export class Application {
         }
         return true
     }
-    getUserData(link: DataSpace = {}): object {
-        const chatId = link.chat_id || PublicData
-        const userId = link.user_id || PublicData
+    _getUserData(link: DataSpace = {}, ARB?: true): object {
+        const chatId = this._calChatId(link.chat_id, ARB)
+        const userId = this._calUserId(link.user_id, ARB)
         return cache.getUserData(this._botName, this._name, {
             chat_id: chatId,
             user_id: userId,
         })
     }
-    setUserData(data: object | null, link: DataSpace = {}) {
-        const chatId = link.chat_id || PublicData
-        const userId = link.user_id || PublicData
+    _setUserData(data: object | null, link: DataSpace = {}, ARB?: true) {
+        const chatId = this._calChatId(link.chat_id, ARB)
+        const userId = this._calUserId(link.user_id, ARB)
         cache.setUserData(this._botName, this._name, data, {
             chat_id: chatId,
             user_id: userId,
         })
+    }
+    _calUserId(id?: number, ARB?: true): number {
+        const _id = id || PubId
+        return ARB ? _id : this._dataBindWithUser ? _id : PubId
+    }
+    _calChatId(id?: number, ARB?: true): number {
+        const _id = id || PubId
+        return ARB ? _id : this._dataBindWithChat ? _id : PubId
     }
     dataMan(dataSpace: DataSpace): ApplicationDataMan {
         return new ApplicationDataMan(this._botName, this._name, dataSpace)
@@ -337,7 +345,7 @@ export class Application {
 }
 
 const DefaultApplication = '_global'
-const PublicData = 0
+const PubId = 0
 
 export type ApplicationInfo = {
     application_name?: string
@@ -348,7 +356,7 @@ export type ApplicationInfo = {
     sub_priority?: number
 }
 
-const DefaultApplicationInfo: Required<ApplicationInfo> = {
+const defaultApplicationInfo: Required<ApplicationInfo> = {
     application_name: DefaultApplication,
     data_space: {
         bind_with_chat: undefined,
@@ -358,7 +366,7 @@ const DefaultApplicationInfo: Required<ApplicationInfo> = {
 }
 
 export class AppBaseUtilCTR<
-    T,
+    T extends AppBaseUtilItem,
     C extends AnyCtor<T> = AnyCtor<T>
 > extends BotUtilCTR<T, C> {}
 
@@ -368,10 +376,7 @@ export class AppBaseUtilItem {
 
     constructor(appInfo: ApplicationInfo = {}, botName: string) {
         this._botName = botName
-        this._applicationInfo = this._bot.getDefaultOptions<ApplicationInfo>(
-            DefaultApplicationInfo,
-            appInfo
-        )
+        this._applicationInfo = assignDefault(defaultApplicationInfo, appInfo)
     }
 
     protected get _bot(): BotUtils {
