@@ -165,6 +165,13 @@ const assign = <T extends object>(
                         target[key][i] = __val
                     }
                 }
+                if (target[key].length < _val.length && !assignExistOnly) {
+                    let _i = target[key].length
+                    while (_i < _val.length) {
+                        target[key][_i] = _val[_i]
+                        _i ++
+                    }
+                }
                 continue
             }
             if (typeof _val == 'object' && _val != {}) {
