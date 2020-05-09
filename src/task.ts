@@ -76,9 +76,17 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
 
     _check(recId: string, verifyKey?: string): void {
         if (!this._records.isCurSessionRec(recId)) return
-        const record = this._records.get(recId, true, false)
-        if (typeof verifyKey !== 'undefined' && verifyKey !== record.info().vk)
+        const record = this._records.get(recId, false, false)
+        if (typeof record == 'undefined') {
+            // record may has been deleted
             return
+        }
+        if (
+            typeof verifyKey !== 'undefined' &&
+            verifyKey !== record.info().vk
+        ) {
+            return
+        }
         const dTs = Date.now() - record.info().next
         const task = this.get(record.recordOf, true, false)
         if (record.info().executed >= task.maxExecCounts) {
