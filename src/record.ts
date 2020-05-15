@@ -67,6 +67,12 @@ export class RecordMgr<RecInfo> extends BotUtilCTR<
         return this._session.isMember(id)
     }
     import(recordOf: string): void {
+        if (!this._bot.ready) {
+            this._bot.event.once('ready', () => {
+                this.import(recordOf)
+            })
+            return
+        }
         const _recs = this.cacheGet()
         for (const _rec of _recs) {
             if (_rec.recordOf === recordOf) {
@@ -90,7 +96,7 @@ export class RecordMgr<RecInfo> extends BotUtilCTR<
             // console.error(e)
             // TODO:
         }
-        if (typeof rec === 'undefined') {
+        if (typeof rec == 'undefined') {
             this.cacheDel(id)
         } else {
             this.cacheSet(id, rec.STO)
@@ -113,7 +119,7 @@ export class RecordMgr<RecInfo> extends BotUtilCTR<
     cacheGet(): RecSTO<RecInfo>[]
     cacheGet(id: string): RecSTO<RecInfo>
     cacheGet(id?: string): RecSTO<RecInfo> | RecSTO<RecInfo>[] {
-        if (typeof id === 'undefined') {
+        if (typeof id == 'undefined') {
             return getRecords(this._botName, this._recordType)
         } else {
             return getRecord(this._botName, this._recordType, id)
@@ -203,7 +209,7 @@ export class Record<RecInfo> {
             [key in keyof RecInfo]?: RecInfo[key]
         }
     ): RecInfo {
-        if (typeof propsUpdate === 'undefined') {
+        if (typeof propsUpdate == 'undefined') {
             return this._info
         } else {
             this._info = { ...this._info, ...propsUpdate }
