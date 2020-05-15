@@ -1,6 +1,6 @@
 # Telegram Bot Utils
 
-[![](https://img.shields.io/npm/v/telegram-bot-utils.svg?style=flat-square)](https://www.npmjs.com/package/telegram-bot-utils)
+[![](https://img.shields.io/npm/v/telegram-bot-utils.svg?style=flat-square)](https://www.npmjs.com/package/telegram-bot-utils) [![](https://img.shields.io/npm/v/telegram-bot-utils/beta?style=flat-square)](https://www.npmjs.com/package/telegram-bot-utils)
 
 A package helps you deploy your application easily on bot.
 
