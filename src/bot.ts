@@ -20,6 +20,15 @@ export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
         botUtils._init()
         return botUtils
     }
+
+    async addSafe(name: string, options: BotOptions = {}):Promise<BotUtils> {
+        const _bot = this.add(name, options)
+        return new Promise((resolve)=>{
+            _bot.event.on('ready', ()=>{
+                resolve(_bot)
+            })
+        })
+    }
 }
 
 type Owner = {
