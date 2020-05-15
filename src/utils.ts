@@ -51,14 +51,16 @@ export const parseId = (id: string): IdInfo => {
 export class GroupId {
     private readonly _prefix?: string
     public readonly group: string
+
     constructor(prefix?: string) {
         this.group = genRandom(idFormat.group_length).toUpperCase()
         this._prefix = prefix
     }
-    public genId(): string {
-        return genId(this._prefix, this.group)
+
+    genId(suffix: boolean = true): string {
+        return genId(this._prefix, suffix ? this.group : undefined)
     }
-    public isMember(id: string): boolean {
+    isMember(id: string): boolean {
         const idInfo = parseId(id)
         if (idInfo.match) {
             return idInfo.suffix === this.group
@@ -66,7 +68,7 @@ export class GroupId {
             return false
         }
     }
-    public import(id: string): string {
+    import(id: string): string {
         const idInfo = parseId(id)
         if (!idInfo.match) {
             return undefined
@@ -163,6 +165,13 @@ const assign = <T extends object>(
                         assign(target[key][i], _val[i])
                     } else {
                         target[key][i] = __val
+                    }
+                }
+                if (target[key].length < _val.length && !assignExistOnly) {
+                    let _i = target[key].length
+                    while (_i < _val.length) {
+                        target[key][_i] = _val[_i]
+                        _i++
                     }
                 }
                 continue

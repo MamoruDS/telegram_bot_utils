@@ -20,6 +20,15 @@ export class BotMgr extends CTR<BotUtils, BotUtilsConstructor> {
         botUtils._init()
         return botUtils
     }
+
+    async addSafe(name: string, options: BotOptions = {}): Promise<BotUtils> {
+        const _bot = this.add(name, options)
+        return new Promise((resolve) => {
+            _bot.event.on('ready', () => {
+                resolve(_bot)
+            })
+        })
+    }
 }
 
 type Owner = {
@@ -74,6 +83,7 @@ export class BotUtils {
     private _botAPI?: NodeTGBotAPI
     private _APIToken?: string
     private _APIOptions?: NodeTGBotAPI.ConstructorOptions
+    private _ready: boolean
 
     constructor(...P: ConstructorParameters<BotUtilsConstructor>)
     constructor(botName: string, options?: BotOptions) {
@@ -82,13 +92,14 @@ export class BotUtils {
         const _options = assignDefault(defaultBotOptions, options)
         this._expireDelay = _options.expireDelay
         this._event = new EventEmitter()
-        if (typeof _options.owner === 'string') {
+        if (typeof _options.owner == 'string') {
             this._owner.username = _options.owner
-        } else if (typeof _options.owner === 'number') {
+        } else if (typeof _options.owner == 'number') {
             this._owner.id = _options.owner
         }
         this._APIToken = _options.api.token
         this._APIOptions = _options.api.options
+        this._ready = false
     }
 
     get name(): string {
@@ -133,6 +144,9 @@ export class BotUtils {
     get api(): NodeTGBotAPI {
         return this._botAPI
     }
+    get ready(): boolean {
+        return this._ready
+    }
 
     async _init() {
         if (typeof this._applications != 'undefined') return // init lock
@@ -144,6 +158,7 @@ export class BotUtils {
         this._groupUtils = new GroupUtils(this._botInfo.name)
         this._botAPI = await this._initAPI(this._APIToken, this._APIOptions)
         this._addAPIListener()
+        this._ready = true
         this._event.emit('ready')
     }
     private async _initAPI(

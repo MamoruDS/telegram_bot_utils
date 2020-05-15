@@ -141,7 +141,7 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
         const dataMan = cmd.dataMan(message)
         if (!cmd._messageFilter(message)) return
         try {
-            const _args = await argumentCheck(cmdInfo.args, cmd.check)
+            const _args = await argumentCheck(cmdInfo.args, cmd.argCheck)
             cmd._exec({
                 arguments: _args,
                 message: message,
@@ -242,7 +242,7 @@ class Command extends AppBaseUtilItem {
     get cmd(): string {
         return this._command
     }
-    get check(): ArgumentCheck[] {
+    get argCheck(): ArgumentCheck[] {
         return this._argumentCheck
     }
     get filter(): string {

@@ -1,6 +1,6 @@
 {
     "name": "telegram-bot-utils",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "description": "",
     "homepage": "https://github.com/MamoruDS/telegram_bot_utils",
     "author": "MamoruDS",
@@ -15,8 +15,7 @@
     },
     "scripts": {
         "test": "node test/main.js",
-        "build": "tsc",
-        "build-watch": "tsc --watch"
+        "dist": "rm -rf dist && tsc"
     },
     "devDependencies": {
         "@types/lodash": "^4.14.149",

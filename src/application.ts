@@ -136,7 +136,9 @@ export class ApplicationDataMan {
             return _data
         }
     }
-    set = (data: object, path?: string[]): void => {
+    set(data: object): void
+    set(data: any, path: string[]): void
+    set(data: any | object, path?: string[]): void {
         let _data = data
         if (typeof path != 'undefined' && Array.isArray(path)) {
             _data = this.application._getUserData(this.dataSpace)
