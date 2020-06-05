@@ -13,17 +13,18 @@ const idFormat = {
 
 const regStr = `((^\\w{${idFormat.prefix_length_min},${idFormat.prefix_length_max}})-|^)((\\w{1,${idFormat.phrase_1_length}})-([A-F\\d]{1,})-(\\w{1,${idFormat.phrase_1_length}}))(-(\\w{${idFormat.suffix_length_min},${idFormat.suffix_length_max}})$|$)`
 
-export const genRandom = (length: number): string => {
-    if (length < 1 || length > 10) {
-        throw new RangeError()
-    }
-    return _.random(36 ** (length - 1), 36 ** length - 1).toString(36)
+const random = (lower: number = 0, upper: number = 10): number => {
+    return Math.floor(Math.random() * (1 + upper - lower)) + lower
+}
+
+export const randomStr = (length: number): string => {
+    return Array.from(Array(length), () => random(0, 35).toString(36)).join('')
 }
 
 export const genId = (prefix?: string, suffix?: string) => {
-    return `${prefix ? `${prefix}-` : ''}${genRandom(
+    return `${prefix ? `${prefix}-` : ''}${randomStr(
         idFormat.phrase_1_length
-    )}-${Date.now().toString(idFormat.ts_radix)}-${genRandom(
+    )}-${Date.now().toString(idFormat.ts_radix)}-${randomStr(
         idFormat.phrase_2_length
     )}${suffix ? `-${suffix}` : ''}`.toUpperCase()
 }
@@ -53,7 +54,7 @@ export class GroupId {
     public readonly group: string
 
     constructor(prefix?: string) {
-        this.group = genRandom(idFormat.group_length).toUpperCase()
+        this.group = randomStr(idFormat.group_length).toUpperCase()
         this._prefix = prefix
     }
 

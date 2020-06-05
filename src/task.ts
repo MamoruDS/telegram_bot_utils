@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events'
 import * as _ from 'lodash'
 
-import { genRandom, wait, assignDefault } from './utils'
+import { randomStr, wait, assignDefault } from './utils'
 import { RecordMgr, RecordMan } from './record'
 import {
     ApplicationDataMan,
@@ -136,7 +136,7 @@ export class TaskMgr extends AppBaseUtilCTR<Task, TaskConstructor> {
     _next(recId: string, timeout: number = 0): void {
         const record = this._records.get(recId, false, false)
         if (record) {
-            const key = genRandom(4)
+            const key = randomStr(4)
             record.info({ vk: key })
             setTimeout(() => {
                 this._check(record.id, key)

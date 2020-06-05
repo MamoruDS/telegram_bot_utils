@@ -1,5 +1,5 @@
 import * as MAIN from './main'
-import { genRandom, assignDefault } from './utils'
+import { randomStr, assignDefault } from './utils'
 import { CallbackQuery, InlineKeyboardButton } from './telegram'
 import {
     ApplicationDataMan,
@@ -230,7 +230,7 @@ export class InlineKYBDUtils extends AppBaseUtilCTR<
                 continue
             }
             if (btn.callback_action) {
-                const KeyId = genRandom(6).toUpperCase()
+                const KeyId = randomStr(6).toUpperCase()
                 _buttons[KeyId] = {
                     action_name: btn.callback_action,
                     data:
