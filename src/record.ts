@@ -1,5 +1,5 @@
 import { GroupId, parseId } from './utils'
-import { getRecords, getRecord, setReocrd } from './cache'
+import { getRecords, getRecord, setRecord } from './cache'
 import { ctrMgr, CTR } from './ctr'
 import { BotUtilCTR } from './bot'
 
@@ -126,10 +126,10 @@ export class RecordMgr<RecInfo> extends BotUtilCTR<
         }
     }
     cacheSet(id: string, rec: RecSTO<RecInfo>): void {
-        setReocrd<RecInfo>(this._botName, this._recordType, id, rec)
+        setRecord<RecInfo>(this._botName, this._recordType, id, rec)
     }
     cacheDel(id: string): void {
-        setReocrd<RecInfo>(this._botName, this._recordType, id, undefined)
+        setRecord<RecInfo>(this._botName, this._recordType, id, undefined)
     }
     recordMan(id: string): RecordMan<RecInfo> {
         return new RecordMan<RecInfo>(id, this)

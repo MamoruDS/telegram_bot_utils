@@ -101,7 +101,7 @@ export function getRecord<I>(
     return JSON.parse({ ..._info, id: recId })
 }
 
-export function setReocrd<I>(
+export function setRecord<I>(
     botName: string,
     recordType: string,
     recId: string,
