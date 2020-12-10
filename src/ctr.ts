@@ -55,7 +55,7 @@ export class CTR<
     get size(): number {
         return this._items.length
     }
-    get list(): ItemType[] {
+    get list(): string[] {
         return this._items.map((v) => {
             return v[this._idField]
         })
