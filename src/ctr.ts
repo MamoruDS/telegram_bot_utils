@@ -60,6 +60,15 @@ export class CTR<
             return v[this._idField]
         })
     }
+    get dict(): {
+        [key: string]: ItemType
+    } {
+        const _dict = {}
+        for (const item of this._items) {
+            _dict[item[this._idField]] = item
+        }
+        return _dict
+    }
     get type(): string {
         return this._itemType
     }

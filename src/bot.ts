@@ -170,7 +170,7 @@ export class BotUtils {
             if (typeof _ctor == 'undefined') {
                 console.warn(
                     'API Module not found: \n' +
-                        'Got API token in Bot constructor, but no API module exist. All built-in functions need API to work are disabled.'
+                        'Got API token in Bot constructor, but no API module exist. All built-in functions need API to work were disabled.'
                 )
             } else {
                 try {
