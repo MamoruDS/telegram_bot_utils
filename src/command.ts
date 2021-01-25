@@ -139,7 +139,7 @@ export class CommandMgr extends AppBaseUtilCTR<Command, CommandConstructor> {
             return
         }
         const dataMan = cmd.dataMan(message)
-        if (!cmd._messageFilter(message)) return
+        if (!(await cmd._messageFilter(message))) return
         try {
             const _args = await argumentCheck(cmdInfo.args, cmd.argCheck)
             cmd._exec({
@@ -261,11 +261,7 @@ class Command extends AppBaseUtilItem {
             return Object.keys(_data).length !== 0
         }
         if (this._filter === 'owner') {
-            return (
-                message.from.id === MAIN.bots.get(this._botName).owner.id ||
-                message.from.username ===
-                    MAIN.bots.get(this._botName).owner.username
-            )
+            return message.from.id === MAIN.bots.get(this._botName).owner.id
         }
         if (this._filter === 'function') {
             return await this._filterFunction(message)

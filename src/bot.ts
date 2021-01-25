@@ -55,7 +55,7 @@ type BotInfo = {
 }
 
 type BotOptions = {
-    owner?: string | number
+    owner?: number
     expireDelay?: number
     api?: {
         token: string
@@ -92,11 +92,7 @@ export class BotUtils {
         const _options = assignDefault(defaultBotOptions, options)
         this._expireDelay = _options.expireDelay
         this._event = new EventEmitter()
-        if (typeof _options.owner == 'string') {
-            this._owner.username = _options.owner
-        } else if (typeof _options.owner == 'number') {
-            this._owner.id = _options.owner
-        }
+        this._owner.id = _options.owner
         this._APIToken = _options.api.token
         this._APIOptions = _options.api.options
         this._ready = false
